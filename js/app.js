@@ -8,7 +8,7 @@
   const Config = global.KKBConfig;
   const Calc = global.KKBCalculator;
 
-  const STORAGE_KEY = 'bri_kkb_custom_settings_v1';
+  const STORAGE_KEY = 'bri_kkb_custom_settings_v2';
   const SCHEME_IDS = ['regular', 'lnp', 'karyawan'];
   const TENORS = [12, 24, 36, 48, 60];
 
@@ -22,8 +22,8 @@
     wilayah: '2',
     financingType: 'New Car',
     vehicleType: 'Non Bus dan Non Truk',
-    brandValue: 'toyota',
-    fuelValue: 'bensin',
+    brandValue: 'TOYOTA',
+    modelValue: 'AVANZA',
     vehiclePrice: 350000000,
     dpMode: 'pct',
     dpPct: 20,
@@ -32,15 +32,14 @@
     selectedPerils: ['banjir'],
     adminFee: 2000000,
     provisiPct: 1.0,
-    polisFee: 50000,
-    blokirFee: 0,
+    polisFee: 60000,
+    blokirFee: 500000,
     installmentType: 'ADDB',
     selectedTenor: 36,
-    amortMode: 'anuitas',
     activeModalTab: 'tabRates',
     modalFinancing: 'all',
     modalWilayah: 'all',
-    provisiBasis: 'price',
+    provisiBasis: 'principal',
     fidusiaBasis: 'price',
     bracketBasis: 'depreciated',
     schemes: cloneDeep(Config.DEFAULT_SCHEMES)
@@ -112,21 +111,23 @@
   }
 
   // ======================== DROPDOWNS & CHECKBOXES ========================
+  function syncVehicleTypeFromFinancing() {
+    state.vehicleType =
+      (Config.VEHICLE_TYPE_BY_FINANCING && Config.VEHICLE_TYPE_BY_FINANCING[state.financingType]) ||
+      'Non Bus dan Non Truk';
+  }
+
   function populateStaticDropdowns() {
-    $('inputVehicleType').innerHTML = Config.VEHICLE_TYPES.map(
-      (t) => `<option value="${t.value}">${t.label}</option>`
-    ).join('');
-    $('inputVehicleType').value = state.vehicleType;
+    syncVehicleTypeFromFinancing();
 
-    $('inputBrand').innerHTML = Config.VEHICLE_BRANDS.map(
-      (b) => `<option value="${b.value}">${b.label}</option>`
-    ).join('');
+    if (!global.KKBVehicles.brands.includes(state.brandValue)) {
+      state.brandValue = global.KKBVehicles.brands[0];
+    }
+    $('inputBrand').replaceChildren(...global.KKBVehicles.brands.map(
+      (brand) => new Option(brand, brand)
+    ));
     $('inputBrand').value = state.brandValue;
-
-    $('inputFuel').innerHTML = Config.FUEL_TYPES.map(
-      (f) => `<option value="${f.value}">${f.label}</option>`
-    ).join('');
-    $('inputFuel').value = state.fuelValue;
+    populateModels();
 
     $('inputCoverage').innerHTML = Config.COVERAGE_OPTIONS.map(
       (c) => `<option value="${c.value}">${c.label}</option>`
@@ -134,18 +135,25 @@
     $('inputCoverage').value = state.coverageValue;
   }
 
+  function populateModels() {
+    const models = global.KKBVehicles.modelsFor(state.brandValue);
+    if (!models.some((row) => row.model === state.modelValue)) state.modelValue = models[0].model;
+    $('inputModel').replaceChildren(...models.map((row) => new Option(row.model, row.model)));
+    $('inputModel').value = state.modelValue;
+  }
+
+  function applyMinimumDp() {
+    const minimum = getMinDp();
+    state.dpPct = minimum.minDpPct;
+    state.dpAmount = minimum.minDpAmount;
+    syncDpInputField();
+  }
+
   function renderPerilCheckboxes() {
     const container = $('perilCheckboxesContainer');
-    const cov = state.coverageValue;
 
     container.innerHTML = Config.INSURANCE_PERILS.map((peril) => {
       const isChecked = state.selectedPerils.indexOf(peril.id) !== -1;
-      const rAR = peril.rates['All Risk'][state.wilayah];
-      const rTLO = peril.rates['TLO'][state.wilayah];
-      let rateLabel;
-      if (cov === 'AllRisk') rateLabel = formatPct(rAR, 3);
-      else if (cov === 'TLO') rateLabel = formatPct(rTLO, 3);
-      else rateLabel = `${formatPct(rAR, 3)} / ${formatPct(rTLO, 3)}`;
 
       return `
         <label class="peril-item ${isChecked ? 'checked' : ''}">
@@ -153,7 +161,6 @@
             <input type="checkbox" class="peril-checkbox" value="${peril.id}" ${isChecked ? 'checked' : ''} />
             <span>${peril.label}</span>
           </span>
-          <span class="peril-rate">${rateLabel}</span>
         </label>
       `;
     }).join('');
@@ -184,7 +191,7 @@
       financingType: state.financingType,
       vehicleType: state.vehicleType,
       brandValue: state.brandValue,
-      fuelValue: state.fuelValue,
+      modelValue: state.modelValue,
       vehiclePrice: state.vehiclePrice,
       schemes: state.schemes
     });
@@ -200,13 +207,17 @@
 
   function applySchemeDefaults(schemeId) {
     state.schemeId = schemeId;
+    syncVehicleTypeFromFinancing();
     const scheme = state.schemes[schemeId] || Config.DEFAULT_SCHEMES.regular;
 
     state.adminFee = scheme.defaultAdmin;
     state.provisiPct = scheme.defaultProvisiPct;
     state.polisFee = scheme.defaultPolis;
     state.blokirFee =
-      (scheme.defaultBlokirByFinancing && scheme.defaultBlokirByFinancing[state.financingType]) || 0;
+      scheme.defaultBlokirByFinancing &&
+      scheme.defaultBlokirByFinancing[state.financingType] !== undefined
+        ? scheme.defaultBlokirByFinancing[state.financingType]
+        : 500000;
 
     $('inputAdminFee').value = formatNumberId(state.adminFee);
     $('inputProvisiPct').value = state.provisiPct.toFixed(2).replace('.', ',');
@@ -215,10 +226,7 @@
 
     ensureTenorAllowed();
 
-    const minDp = getMinDp();
-    state.dpPct = minDp.minDpPct;
-    state.dpAmount = minDp.minDpAmount;
-    syncDpInputField();
+    if (!lastSuiteResult) applyMinimumDp();
 
     updateSchemeUi();
     recalculateAndRender();
@@ -226,7 +234,9 @@
 
   function updateSchemeUi() {
     document.querySelectorAll('.scheme-btn').forEach((btn) => {
-      btn.classList.toggle('active', btn.getAttribute('data-scheme') === state.schemeId);
+      const selected = btn.getAttribute('data-scheme') === state.schemeId;
+      btn.classList.toggle('active', selected);
+      btn.setAttribute('aria-pressed', String(selected));
     });
 
     const metaIds = { regular: 'metaRegular', lnp: 'metaLnp', karyawan: 'metaKaryawan' };
@@ -269,7 +279,7 @@
     const covObj = Config.COVERAGE_OPTIONS.find((c) => c.value === state.coverageValue);
     if (covObj) {
       $('coverageCriteriaText').textContent = covObj.criteria;
-      $('insSubtitleBadge').textContent = `${covObj.label} • Wilayah ${state.wilayah}`;
+      $('insSubtitleBadge').textContent = `${covObj.label} • Wilayah ${state.wilayah} • ${state.vehicleType}`;
     }
 
     const suite = Calc.calculateFullSuite({
@@ -278,7 +288,7 @@
       wilayah: state.wilayah,
       vehicleType: state.vehicleType,
       brandValue: state.brandValue,
-      fuelValue: state.fuelValue,
+      modelValue: state.modelValue,
       vehiclePrice: state.vehiclePrice,
       dpAmount: state.dpAmount,
       coverageValue: state.coverageValue,
@@ -304,6 +314,9 @@
       `DP Murni <strong>${formatRupiah(active.dpAmount)}</strong> (${formatPct(active.dpPct, 1)}) • Pokok Hutang <strong>${formatRupiah(active.principalLoan)}</strong>`;
 
     const isBelowMin = Math.round(active.dpAmount) < Math.round(minDp.minDpAmount);
+    $('simulationNotice').hidden = !isBelowMin;
+    $('simulationNotice').textContent = 'DP yang diisi belum memenuhi minimum kendaraan. Hasil ini hanya ilustrasi; gunakan tombol Pakai Min untuk menyesuaikan.';
+    $('inputDpValue').setAttribute('aria-invalid', String(isBelowMin));
     $('dpMinBox').classList.toggle('warning', isBelowMin);
     $('dpMinText').innerHTML = isBelowMin
       ? `<strong>⚠ Di bawah minimal ${formatPct(minDp.minDpPct, 1)}</strong> (${formatRupiah(minDp.minDpAmount)})`
@@ -340,7 +353,7 @@
 
     // 3. Tabel Jadwal Amortisasi & Anotasi Bulanan
     $('amortTenorSpan').textContent = active.tenorMonths;
-    const amortRows = Calc.generateAmortizationSchedule(active, state.amortMode);
+    const amortRows = Calc.generateAmortizationSchedule(active, 'anuitas');
     renderAmortizationTable(amortRows, active);
 
     if ($('refModalBackdrop').classList.contains('open')) {
@@ -357,7 +370,7 @@
           .filter(Boolean)
           .join(' ');
         return `
-          <tr class="${cls}" data-tenor="${row.tenorMonths}" tabindex="0">
+          <tr class="${cls}" data-tenor="${row.tenorMonths}" tabindex="${row.isAvailable ? '0' : '-1'}" aria-disabled="${!row.isAvailable}">
             <td>
               <strong>${row.tenorMonths} Bulan</strong>
               <span class="muted">(${row.tenorYears} thn)</span>
@@ -365,8 +378,6 @@
               ${!row.isAvailable ? '<span class="tag tag-gray">Tidak tersedia</span>' : ''}
             </td>
             <td class="num" data-label="Suku Bunga Flat">${formatPct(row.flatRatePa)}</td>
-            <td class="num" data-label="Total Asuransi">${formatRupiah(row.insurance.totalPremium)}</td>
-            <td class="num" data-label="Biaya Kredit">${formatRupiah(row.creditFees.totalCreditFees)}</td>
             <td class="num strong text-blue" data-label="Angsuran / Bulan">${formatRupiah(row.monthlyInstallment)}</td>
             <td class="num strong text-orange" data-label="Total DP (TDP)">${formatRupiah(row.totalDp)}</td>
           </tr>
@@ -376,6 +387,7 @@
 
     tbody.querySelectorAll('tr.clickable').forEach((tr) => {
       const select = () => {
+        if (tr.classList.contains('unavailable')) return;
         state.selectedTenor = parseInt(tr.getAttribute('data-tenor'), 10);
         recalculateAndRender();
       };
@@ -397,51 +409,51 @@
     const rowsHtml = `
       <tr>
         <td class="strong">1. Down Payment (DP Murni)</td>
-        <td class="muted">${formatPct(active.dpPct, 2)} × ${formatRupiah(active.vehiclePrice)}</td>
         <td class="num strong">${formatRupiah(active.dpAmount)}</td>
+        <td class="muted col-ket">${formatPct(active.dpPct, 2)} × ${formatRupiah(active.vehiclePrice)}</td>
       </tr>
       <tr>
         <td class="strong">2. Total Premi Asuransi</td>
-        <td class="muted">${covLabel} (${active.tenorYears} Tahun)</td>
         <td class="num strong">${formatRupiah(ins.totalPremium)}</td>
+        <td class="muted col-ket">${covLabel} (${active.tenorYears} Tahun • ${state.vehicleType})</td>
       </tr>
       <tr class="subtotal-row">
         <td>3. Total Biaya Kredit</td>
-        <td class="muted">Admin + Provisi + Polis + Fidusia + Blokir</td>
         <td class="num">${formatRupiah(fees.totalCreditFees)}</td>
+        <td class="muted col-ket">Admin + Provisi + Polis + Fidusia + Blokir</td>
       </tr>
       <tr class="subrow">
         <td style="padding-left:28px;">• Biaya Admin</td>
-        <td class="muted">Administrasi kredit</td>
         <td class="num">${formatRupiah(fees.adminFee)}</td>
+        <td class="muted col-ket">Administrasi kredit</td>
       </tr>
       <tr class="subrow">
         <td style="padding-left:28px;">• Biaya Provisi</td>
-        <td class="muted">${formatPct(fees.provisiPct)} × ${state.provisiBasis === 'price' ? 'Harga Kendaraan' : 'Pokok Hutang'}</td>
         <td class="num">${formatRupiah(fees.provisiAmount)}</td>
+        <td class="muted col-ket">${formatPct(fees.provisiPct)} × ${state.provisiBasis === 'price' ? 'Harga Kendaraan' : 'Pokok Hutang'}</td>
       </tr>
       <tr class="subrow">
         <td style="padding-left:28px;">• Biaya Polis</td>
-        <td class="muted">Penerbitan polis asuransi</td>
         <td class="num">${formatRupiah(fees.polisFee)}</td>
+        <td class="muted col-ket">Penerbitan polis asuransi</td>
       </tr>
       <tr class="subrow">
         <td style="padding-left:28px;">• Biaya Fidusia</td>
-        <td class="muted">${fees.fidusiaBracket}</td>
         <td class="num">${formatRupiah(fees.fidusiaFee)}</td>
+        <td class="muted col-ket">${fees.fidusiaBracket}</td>
       </tr>
       <tr class="subrow">
         <td style="padding-left:28px;">• Blokir BPKB</td>
-        <td class="muted">Pengamanan agunan BPKB</td>
         <td class="num">${formatRupiah(fees.blokirFee)}</td>
+        <td class="muted col-ket">Pengamanan agunan BPKB</td>
       </tr>
       ${
         active.firstInstallmentInTdp > 0
           ? `
         <tr>
           <td class="strong">4. Angsuran Ke-1 (ADDM)</td>
-          <td class="muted">Dibayar di muka saat akad</td>
           <td class="num strong">${formatRupiah(active.firstInstallmentInTdp)}</td>
+          <td class="muted col-ket">Dibayar di muka saat akad</td>
         </tr>`
           : ''
       }
@@ -450,8 +462,13 @@
     $('tdpTableBody').innerHTML = rowsHtml;
     $('tdpTableFoot').innerHTML = `
       <tr>
-        <td colspan="2">TOTAL DOWN PAYMENT (TDP)</td>
+        <td>TOTAL DOWN PAYMENT (TDP)</td>
         <td class="num text-orange">${formatRupiah(active.totalDp)}</td>
+        <td class="muted col-ket">${
+          active.installmentType === 'ADDM'
+            ? 'DP + Asuransi + Biaya Kredit + Angsuran Ke-1'
+            : 'DP + Asuransi + Biaya Kredit'
+        }</td>
       </tr>
     `;
   }
@@ -467,11 +484,11 @@
         return `
           <tr>
             <td><strong>Tahun ${yr.year}</strong> <span class="muted">(Bln ${yr.monthRange})</span></td>
-            <td class="num" data-label="Depresiasi">${yr.depreciationPct}%</td>
+            <td class="num strong" data-label="Premi (Rp)">${formatRupiah(yr.yearTotalPremium)}</td>
             <td class="num" data-label="Pertanggungan">${formatRupiah(yr.insuredValue)}</td>
-            <td data-label="Coverage"><span class="tag ${isAR ? 'tag-blue' : 'tag-amber'}">${yr.coverageType}</span></td>
+            <td class="num" data-label="Depresiasi">${yr.depreciationPct}%</td>
+            <td class="col-ket" data-label="Coverage"><span class="tag ${isAR ? 'tag-blue' : 'tag-amber'}">${yr.coverageType}</span></td>
             <td class="num" data-label="Total Rate">${rateDetail}</td>
-            <td class="num strong" data-label="Premi">${formatRupiah(yr.yearTotalPremium)}</td>
           </tr>
         `;
       })
@@ -479,17 +496,16 @@
 
     $('yearlyInsuranceFoot').innerHTML = `
       <tr>
-        <td colspan="5">TOTAL PREMI ASURANSI (${insurance.years} TAHUN)</td>
+        <td>TOTAL PREMI ASURANSI (${insurance.years} TAHUN)</td>
         <td class="num text-orange" data-label="Total Premi">${formatRupiah(insurance.totalPremium)}</td>
+        <td colspan="4" class="muted col-ket hide-sm">Akumulasi premi tahun 1 s.d. tahun ${insurance.years}</td>
       </tr>
     `;
   }
 
   function renderAmortizationTable(rows, active) {
     $('amortSubtitleInfo').textContent =
-      state.amortMode === 'anuitas'
-        ? `Metode Anuitas Efektif ±${formatPct(active.effectiveRatePa)} p.a. (setara KPR — porsi bunga menurun, porsi pokok meningkat tiap bulan)`
-        : `Metode Proporsional Flat ${formatPct(active.flatRatePa)} p.a. (porsi pokok & bunga tetap tiap bulan)`;
+      `Metode Anuitas Efektif ±${formatPct(active.effectiveRatePa)} p.a. (setara KPR — porsi bunga menurun, porsi pokok meningkat tiap bulan)`;
 
     let tPrin = 0;
     let tInt = 0;
@@ -508,9 +524,6 @@
             <td class="num text-orange">${formatRupiah(r.interestPart)}</td>
             <td class="num strong">${formatRupiah(r.installment)}</td>
             <td class="num">${formatRupiah(r.endingBalance)}</td>
-            <td class="hide-sm">
-              <span class="progress"><span class="progress-bar"><span style="width:${r.paidPct.toFixed(1)}%"></span></span>${r.paidPct.toFixed(0)}%</span>
-            </td>
             <td class="annot"><span class="annot-dot"></span>${r.annotation}</td>
           </tr>
         `;
@@ -525,7 +538,6 @@
         <td class="num">${formatRupiah(tInt)}</td>
         <td class="num">${formatRupiah(tPmt)}</td>
         <td class="num">Rp 0</td>
-        <td class="hide-sm">100%</td>
         <td>Akumulasi ${rows.length} bulan angsuran</td>
       </tr>
     `;
@@ -653,11 +665,13 @@
         { key: 'blokir:New Car', label: 'Blokir BPKB — New Car (Rp)', step: 50000 },
         { key: 'blokir:Used Car', label: 'Blokir BPKB — Used Car (Rp)', step: 50000 },
         { key: 'blokir:Refinancing', label: 'Blokir BPKB — Refinancing (Rp)', step: 50000 },
-        { key: 'dpSchemeModifier', label: 'Relaksasi Minimal DP (%)', step: 0.5 }
+        { key: 'blokir:Niaga Barang', label: 'Blokir BPKB — Niaga Barang (Rp)', step: 50000 }
       ];
 
       const getVal = (sch, key) =>
-        key.indexOf('blokir:') === 0 ? sch.defaultBlokirByFinancing[key.split(':')[1]] || 0 : sch[key];
+        key.indexOf('blokir:') === 0
+          ? sch.defaultBlokirByFinancing[key.split(':')[1]] ?? 500000
+          : sch[key];
 
       const rows = feeRows
         .map(
@@ -697,8 +711,8 @@
             <div class="field">
               <label class="label" for="selProvisiBasis">Basis Biaya Provisi (Rp)</label>
               <select id="selProvisiBasis" class="control">
-                <option value="price" ${state.provisiBasis === 'price' ? 'selected' : ''}>Biaya Provisi (%) × Harga Kendaraan</option>
                 <option value="principal" ${state.provisiBasis === 'principal' ? 'selected' : ''}>Biaya Provisi (%) × Pokok Hutang</option>
+                <option value="price" ${state.provisiBasis === 'price' ? 'selected' : ''}>Biaya Provisi (%) × Harga Kendaraan</option>
               </select>
             </div>
             <div class="field">
@@ -728,13 +742,16 @@
           if (key.indexOf('blokir:') === 0) {
             sch.defaultBlokirByFinancing[key.split(':')[1]] = Math.max(0, v);
           } else {
-            sch[key] = key === 'dpSchemeModifier' ? v : Math.max(0, v);
+            sch[key] = Math.max(0, v);
           }
-          if (sId === state.schemeId && key !== 'dpSchemeModifier') {
+          if (sId === state.schemeId) {
             state.adminFee = sch.defaultAdmin;
             state.provisiPct = sch.defaultProvisiPct;
             state.polisFee = sch.defaultPolis;
-            state.blokirFee = sch.defaultBlokirByFinancing[state.financingType] || 0;
+            state.blokirFee =
+              sch.defaultBlokirByFinancing[state.financingType] !== undefined
+                ? sch.defaultBlokirByFinancing[state.financingType]
+                : 500000;
             $('inputAdminFee').value = formatNumberId(state.adminFee);
             $('inputProvisiPct').value = state.provisiPct.toFixed(2).replace('.', ',');
             $('inputPolisFee').value = formatNumberId(state.polisFee);
@@ -939,7 +956,7 @@
     if (!btn) return;
     btn.addEventListener('click', () => {
       state.schemes = cloneDeep(Config.DEFAULT_SCHEMES);
-      state.provisiBasis = 'price';
+      state.provisiBasis = 'principal';
       state.fidusiaBasis = 'price';
       state.bracketBasis = 'depreciated';
       saveCustomSettings();
@@ -982,20 +999,30 @@
 
     $('inputFinancingType').addEventListener('change', (e) => {
       state.financingType = e.target.value;
+      syncVehicleTypeFromFinancing();
       const sch = state.schemes[state.schemeId];
-      state.blokirFee = sch.defaultBlokirByFinancing[state.financingType] || 0;
+      state.blokirFee =
+        sch.defaultBlokirByFinancing &&
+        sch.defaultBlokirByFinancing[state.financingType] !== undefined
+          ? sch.defaultBlokirByFinancing[state.financingType]
+          : 500000;
       $('inputBlokirFee').value = formatNumberId(state.blokirFee);
       ensureTenorAllowed();
       updateSchemeUi();
       recalculateAndRender();
     });
 
-    ['inputVehicleType', 'inputBrand', 'inputFuel'].forEach((id) => {
-      const key = { inputVehicleType: 'vehicleType', inputBrand: 'brandValue', inputFuel: 'fuelValue' }[id];
-      $(id).addEventListener('change', (e) => {
-        state[key] = e.target.value;
-        recalculateAndRender();
-      });
+    $('inputBrand').addEventListener('change', (e) => {
+      state.brandValue = e.target.value;
+      state.modelValue = '';
+      populateModels();
+      applyMinimumDp();
+      recalculateAndRender();
+    });
+    $('inputModel').addEventListener('change', (e) => {
+      state.modelValue = e.target.value;
+      applyMinimumDp();
+      recalculateAndRender();
     });
 
     const elPrice = $('inputVehiclePrice');
@@ -1040,10 +1067,7 @@
     });
 
     $('btnApplyMinDp').addEventListener('click', () => {
-      if (!lastSuiteResult) return;
-      state.dpPct = lastSuiteResult.minDpInfo.minDpPct;
-      state.dpAmount = lastSuiteResult.minDpInfo.minDpAmount;
-      syncDpInputField();
+      applyMinimumDp();
       recalculateAndRender();
     });
 
@@ -1085,27 +1109,14 @@
       recalculateAndRender();
     });
 
-    $('btnAmortAnuitas').addEventListener('click', () => {
-      state.amortMode = 'anuitas';
-      $('btnAmortAnuitas').classList.add('active');
-      $('btnAmortFlat').classList.remove('active');
-      recalculateAndRender();
-    });
-    $('btnAmortFlat').addEventListener('click', () => {
-      state.amortMode = 'flat';
-      $('btnAmortFlat').classList.add('active');
-      $('btnAmortAnuitas').classList.remove('active');
-      recalculateAndRender();
-    });
-
     // Reset Form
     $('btnResetForm').addEventListener('click', () => {
       Object.assign(state, {
         wilayah: '2',
         financingType: 'New Car',
         vehicleType: 'Non Bus dan Non Truk',
-        brandValue: 'toyota',
-        fuelValue: 'bensin',
+        brandValue: 'TOYOTA',
+        modelValue: 'AVANZA',
         vehiclePrice: 350000000,
         dpMode: 'pct',
         coverageValue: 'Kombinasi#1',
@@ -1115,9 +1126,8 @@
       });
       $('inputWilayah').value = state.wilayah;
       $('inputFinancingType').value = state.financingType;
-      $('inputVehicleType').value = state.vehicleType;
-      $('inputBrand').value = state.brandValue;
-      $('inputFuel').value = state.fuelValue;
+      populateStaticDropdowns();
+      applyMinimumDp();
       $('inputVehiclePrice').value = formatNumberId(state.vehiclePrice);
       $('inputCoverage').value = state.coverageValue;
       $('inputInstallmentType').value = state.installmentType;
@@ -1147,12 +1157,25 @@
   }
 
   // ======================== INIT ========================
-  function init() {
-    loadSavedSettings();
-    populateStaticDropdowns();
-    renderPerilCheckboxes();
-    bindEvents();
-    applySchemeDefaults(state.schemeId);
+  async function init() {
+    const controls = [...document.querySelectorAll('button, input, select')];
+    controls.forEach((control) => { control.disabled = true; });
+    const status = $('simulationNotice');
+    status.hidden = false;
+    status.textContent = 'Memuat data kendaraan dari vehicles.csv...';
+    try {
+      await global.KKBVehicles.load();
+      loadSavedSettings();
+      populateStaticDropdowns();
+      renderPerilCheckboxes();
+      bindEvents();
+      applySchemeDefaults(state.schemeId);
+      controls.forEach((control) => { control.disabled = false; });
+    } catch (error) {
+      status.hidden = false;
+      status.textContent = `Data kendaraan gagal dimuat: ${error.message} Jalankan melalui Live Server atau hosting HTTP, lalu periksa vehicles.csv dan muat ulang halaman.`;
+      document.querySelector('.results').querySelectorAll('section').forEach((section) => { section.hidden = true; });
+    }
   }
 
   if (document.readyState === 'loading') {

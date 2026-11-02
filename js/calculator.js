@@ -3,7 +3,7 @@
  * Mengimplementasikan seluruh rumus spesifikasi KKB BRI:
  * 1. TDP = DP + Asuransi + Biaya Kredit (+ Angsuran ke-1 bila ADDM aktif)
  * 2. Biaya Kredit = Admin + Provisi (Rp) + Polis + Fidusia + Blokir BPKB
- * 3. Biaya Provisi (Rp) = Biaya Provisi (%) * Harga Kendaraan (atau Pokok Hutang)
+ * 3. Biaya Provisi (Rp) = Biaya Provisi (%) * Pokok Hutang (atau Harga Kendaraan)
  * 4. Biaya Fidusia = Lookup tabel Nilai Penjaminan
  * 5. Premi Asuransi = Multi-tahun dengan Rate Dasar + Perluasan Klaim * Nilai Pertanggungan Terdepresiasi
  * 6. Jadwal Amortisasi & Anotasi Bulanan setara KPR (Anuitas Efektif Ekuivalen & Flat Proporsional)
@@ -13,57 +13,19 @@
 
   const Config = global.KKBConfig;
 
-  /**
-   * Menghitung batas Minimal DP (%) & (Rp) berdasarkan:
-   * Skema (Regular / LNP / Karyawan), Jenis Pembiayaan, Tipe Kendaraan, Merk, dan Jenis Bahan Bakar
-   */
+  /** Minimum DP hanya berdasarkan pasangan merk dan model yang terdaftar. */
   function calculateMinDP(params) {
-    const {
-      schemeId = 'regular',
-      financingType = 'New Car',
-      vehicleType = 'Non Bus dan Non Truk',
-      brandValue = 'toyota',
-      fuelValue = 'bensin',
-      vehiclePrice = 0,
-      schemes = Config.DEFAULT_SCHEMES
-    } = params;
-
-    const scheme = schemes[schemeId] || Config.DEFAULT_SCHEMES.regular;
-    const baseByFinancing = Config.BASE_MIN_DP_BY_FINANCING[financingType] || Config.BASE_MIN_DP_BY_FINANCING['New Car'];
-    const basePct = baseByFinancing[vehicleType] !== undefined ? baseByFinancing[vehicleType] : 20;
-
-    const brandObj = Config.VEHICLE_BRANDS.find((b) => b.value === brandValue) || Config.VEHICLE_BRANDS[0];
-    const fuelObj = Config.FUEL_TYPES.find((f) => f.value === fuelValue) || Config.FUEL_TYPES[0];
-
-    const brandMod = brandObj.dpModifier || 0;
-    const fuelMod = fuelObj.dpModifier || 0;
-    const schemeMod = scheme.dpSchemeModifier || 0;
-
-    const rawPct = basePct + brandMod + fuelMod + schemeMod;
-    const minFloor = fuelValue === 'ev' ? 10 : 10;
-    const minDpPct = Math.min(50, Math.max(minFloor, rawPct));
-    const minDpAmount = Math.round((vehiclePrice * minDpPct) / 100);
-
-    const factors = [
-      { label: `${financingType} (${vehicleType})`, value: `${basePct}%` }
-    ];
-    if (brandMod !== 0) {
-      factors.push({ label: `Merk ${brandObj.origin}`, value: `${brandMod > 0 ? '+' : ''}${brandMod}%` });
-    }
-    if (fuelMod !== 0) {
-      factors.push({ label: `Bahan Bakar ${fuelObj.badge}`, value: `${fuelMod > 0 ? '+' : ''}${fuelMod}%` });
-    }
-    if (schemeMod !== 0) {
-      factors.push({ label: `Privilege ${scheme.name}`, value: `${schemeMod > 0 ? '+' : ''}${schemeMod}%` });
-    }
-
+    const { brandValue, modelValue, vehiclePrice = 0 } = params;
+    const vehicle = global.KKBVehicles.find(brandValue, modelValue);
+    if (!vehicle) throw new RangeError('Merk dan tipe kendaraan tidak terdaftar.');
+    const minDpPct = vehicle.minDpPct;
+    const minDpAmount = Math.round((Math.max(0, vehiclePrice) * minDpPct) / 100);
     return {
       minDpPct,
       minDpAmount,
-      basePct,
-      brandOrigin: brandObj.origin,
-      fuelBadge: fuelObj.badge,
-      factors
+      basePct: minDpPct,
+      vehicle,
+      factors: [{ label: `${vehicle.brand} ${vehicle.model}`, value: `${minDpPct}%` }]
     };
   }
 
@@ -217,11 +179,11 @@
       provisiPct = 0,
       polisFee = 0,
       blokirFee = 0,
-      provisiBasis = 'price', // 'price' = Biaya Provisi (%) * Harga Kendaraan (sesuai spesifikasi), 'principal' = * Pokok Hutang
+      provisiBasis = 'principal', // 'principal' = Biaya Provisi (%) * Pokok Hutang (sesuai spesifikasi), 'price' = * Harga Kendaraan
       fidusiaBasis = 'price' // 'price' = Harga Kendaraan, 'principal' = Pokok Hutang
     } = params;
 
-    const provisiBaseAmount = provisiBasis === 'principal' ? principalLoan : vehiclePrice;
+    const provisiBaseAmount = provisiBasis === 'price' ? vehiclePrice : principalLoan;
     const provisiAmount = Math.round((provisiBaseAmount * provisiPct) / 100);
 
     const fidusiaBaseAmount = fidusiaBasis === 'principal' ? principalLoan : vehiclePrice;
@@ -300,7 +262,7 @@
       schemeId = 'regular',
       financingType = 'New Car',
       wilayah = '2',
-      vehicleType = 'Non Bus dan Non Truk',
+      vehicleType,
       vehiclePrice = 0,
       dpAmount = 0,
       coverageValue = 'AllRisk',
@@ -311,11 +273,16 @@
       blokirFee = 0,
       tenorMonths = 36,
       installmentType = 'ADDB', // 'ADDB' (default: TDP = DP + Asuransi + Biaya Kredit) atau 'ADDM'
-      provisiBasis = 'price',
+      provisiBasis = 'principal',
       fidusiaBasis = 'price',
       bracketBasis = 'depreciated',
       schemes = Config.DEFAULT_SCHEMES
     } = params;
+
+    const resolvedVehicleType =
+      vehicleType ||
+      (Config.VEHICLE_TYPE_BY_FINANCING && Config.VEHICLE_TYPE_BY_FINANCING[financingType]) ||
+      'Non Bus dan Non Truk';
 
     const scheme = schemes[schemeId] || Config.DEFAULT_SCHEMES.regular;
     const safePrice = Math.max(0, vehiclePrice);
@@ -343,7 +310,7 @@
     const insurance = calculateInsuranceForTenor({
       vehiclePrice: safePrice,
       wilayah,
-      vehicleType,
+      vehicleType: resolvedVehicleType,
       coverageValue,
       selectedPerils,
       tenorMonths,

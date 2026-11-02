@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kalkulator Simulasi BRI KKB Debitur</title>
   <meta name="description" content="Kalkulator Simulasi Kredit Kendaraan Bermotor (KKB) BRI untuk skema Regular, LNP, dan Karyawan lengkap dengan perhitungan TDP, Asuransi, Fidusia, dan jadwal angsuran bulanan." />
-  <link rel="icon" type="image/png" href="BRI_2025.png" />
+  <link rel="icon" type="image/png" href="LOGO_BRI_KKB.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
@@ -16,7 +16,7 @@
   <header class="navbar">
     <div class="container navbar-inner">
       <div class="brand">
-        <img src="BRI_2025.png" alt="Logo BRI" class="brand-logo" />
+        <img src="LOGO_BRI_KKB.png" alt="Logo BRI KKB" class="brand-logo" />
         <span class="brand-divider" aria-hidden="true"></span>
         <div class="brand-text">
           <h1 class="brand-title">Kalkulator Simulasi KKB Debitur</h1>
@@ -66,7 +66,7 @@
       <aside class="card form-card" aria-label="Form Input Data Kredit">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Parameter Input Kredit</h2>
+            <h2 class="card-title">Data Kredit</h2>
             <p class="card-subtitle" id="activeSchemeSubtitle">BRI KKB Regular • New Car</p>
           </div>
           <button type="button" class="btn btn-ghost btn-xs" id="btnResetForm">↺ Reset</button>
@@ -76,16 +76,8 @@
           <div class="form-grid">
             <!-- A. Jenis Kredit -->
             <div class="form-section">
-              <h3 class="form-section-title">1. Wilayah &amp; Jenis Pembiayaan</h3>
+              <h3 class="form-section-title">1. Pembiayaan</h3>
 
-              <div class="field">
-                <label class="label" for="inputWilayah">Wilayah Kendaraan</label>
-                <select id="inputWilayah" class="control">
-                  <option value="1">1 — Pulau Sumatera</option>
-                  <option value="2" selected>2 — DKI Jakarta &amp; Banten</option>
-                  <option value="3">3 — Selain Wilayah 1 &amp; 2</option>
-                </select>
-              </div>
 
               <div class="field">
                 <label class="label" for="inputFinancingType">Jenis Pembiayaan</label>
@@ -93,6 +85,7 @@
                   <option value="New Car" selected>New Car (Mobil/Kendaraan Baru)</option>
                   <option value="Used Car">Used Car (Kendaraan Bekas)</option>
                   <option value="Refinancing">Refinancing (Fasilitas Dana)</option>
+                  <option value="Niaga Barang">Niaga Barang (New Car Commercial)</option>
                 </select>
               </div>
             </div>
@@ -102,19 +95,13 @@
               <h3 class="form-section-title">2. Kendaraan &amp; Harga</h3>
 
               <div class="field">
-                <label class="label" for="inputVehicleType">Tipe Kendaraan</label>
-                <select id="inputVehicleType" class="control"></select>
+                <label class="label" for="inputBrand">Merk</label>
+                <select id="inputBrand" class="control"></select>
               </div>
-
-              <div class="field-row">
-                <div class="field">
-                  <label class="label" for="inputBrand">Merk</label>
-                  <select id="inputBrand" class="control"></select>
-                </div>
-                <div class="field">
-                  <label class="label" for="inputFuel">Bahan Bakar</label>
-                  <select id="inputFuel" class="control"></select>
-                </div>
+              <div class="field">
+                <label class="label" for="inputModel">Tipe / Model</label>
+                <select id="inputModel" class="control"></select>
+                <p class="hint">Minimum DP otomatis sesuai merk dan tipe yang dipilih.</p>
               </div>
 
               <div class="field">
@@ -152,7 +139,7 @@
                 </div>
                 <div class="hint" id="dpConvertedCaption"></div>
 
-                <div class="dp-status" id="dpMinBox">
+                <div class="dp-status" id="dpMinBox" aria-live="polite">
                   <div>
                     <div id="dpMinText"></div>
                     <div class="dp-status-detail" id="dpFactorsList"></div>
@@ -162,6 +149,18 @@
               </div>
             </div>
 
+            <section class="form-section advanced-settings">
+              <h3 class="form-section-title">Pengaturan lanjutan</h3>
+              <p class="card-subtitle">Asuransi &amp; biaya kredit</p>
+              <div class="details-body">
+              <div class="field">
+                <label class="label" for="inputWilayah">Wilayah Asuransi</label>
+                <select id="inputWilayah" class="control">
+                  <option value="1">1 - Pulau Sumatera</option>
+                  <option value="2" selected>2 - DKI Jakarta &amp; Banten</option>
+                  <option value="3">3 - Selain Wilayah 1 &amp; 2</option>
+                </select>
+              </div>
             <!-- D. Asuransi -->
             <div class="form-section">
               <h3 class="form-section-title">4. Asuransi Bundling</h3>
@@ -208,14 +207,14 @@
                   <label class="label" for="inputPolisFee">Biaya Polis</label>
                   <div class="input-group has-left">
                     <span class="addon addon-left">Rp</span>
-                    <input type="text" id="inputPolisFee" class="control" inputmode="numeric" value="50.000" autocomplete="off" />
+                    <input type="text" id="inputPolisFee" class="control" inputmode="numeric" value="60.000" autocomplete="off" />
                   </div>
                 </div>
                 <div class="field">
                   <label class="label" for="inputBlokirFee">Blokir BPKB</label>
                   <div class="input-group has-left">
                     <span class="addon addon-left">Rp</span>
-                    <input type="text" id="inputBlokirFee" class="control" inputmode="numeric" value="0" autocomplete="off" />
+                    <input type="text" id="inputBlokirFee" class="control" inputmode="numeric" value="500.000" autocomplete="off" />
                   </div>
                 </div>
               </div>
@@ -238,12 +237,15 @@
                 </select>
               </div>
             </div>
+              </div>
+            </section>
           </div>
         </div>
       </aside>
 
       <!-- ======================== KOLOM KANAN: TABEL OUTPUT ======================== -->
       <div class="results">
+        <p class="simulation-notice" id="simulationNotice" role="status" hidden></p>
         <!-- Ringkasan Angka Utama -->
         <section class="kpi-grid" aria-label="Ringkasan Hasil">
           <div class="kpi primary">
@@ -267,8 +269,8 @@
         <section class="card" aria-label="Tabel Simulasi Tenor">
           <div class="card-header">
             <div>
-              <h2 class="card-title">Tabel Simulasi Tenor, Angsuran &amp; Total DP</h2>
-              <p class="card-subtitle">Klik salah satu baris tenor untuk memperbarui rincian biaya &amp; tabel angsuran bulanan di bawah</p>
+              <h2 class="card-title">Pilihan Tenor</h2>
+              <p class="card-subtitle">Pilih tenor untuk melihat angsuran dan total pembayaran awal.</p>
             </div>
             <span class="tag tag-blue" id="tableSchemeBadge">BRI KKB Regular</span>
           </div>
@@ -278,8 +280,6 @@
                 <tr>
                   <th>Tenor (Bulan)</th>
                   <th class="num">Suku Bunga Flat</th>
-                  <th class="num">Total Asuransi</th>
-                  <th class="num">Biaya Kredit</th>
                   <th class="num">Angsuran / Bulan</th>
                   <th class="num">Total DP (TDP)</th>
                 </tr>
@@ -290,6 +290,8 @@
         </section>
 
         <!-- Rincian Tabel TDP & Tabel Asuransi Tahunan (Berdampingan sesuai resolusi) -->
+        <section class="card result-details">
+          <div class="card-header"><h2 class="card-title">Rincian pembayaran awal &amp; asuransi</h2></div>
         <div class="split-tables">
           <!-- Tabel Komponen TDP & Biaya Kredit -->
           <section class="card" aria-label="Tabel Rincian TDP dan Biaya Kredit">
@@ -304,8 +306,8 @@
                 <thead>
                   <tr>
                     <th>Komponen Biaya</th>
-                    <th>Keterangan</th>
                     <th class="num">Nominal (Rp)</th>
+                    <th class="col-ket">Keterangan</th>
                   </tr>
                 </thead>
                 <tbody id="tdpTableBody"></tbody>
@@ -327,11 +329,11 @@
                 <thead>
                   <tr>
                     <th>Tahun</th>
-                    <th class="num">Depresiasi</th>
+                    <th class="num">Premi (Rp)</th>
                     <th class="num">Pertanggungan</th>
-                    <th>Coverage</th>
+                    <th class="num">Depresiasi</th>
+                    <th class="col-ket">Coverage</th>
                     <th class="num">Total Rate</th>
-                    <th class="num">Premi</th>
                   </tr>
                 </thead>
                 <tbody id="yearlyInsuranceBody"></tbody>
@@ -340,17 +342,14 @@
             </div>
           </section>
         </div>
+        </section>
 
         <!-- OUTPUT 2: Tabel Jadwal Amortisasi & Anotasi Lengkap Per Bulan (Tanpa Grafik) -->
-        <section class="card" aria-label="Jadwal Amortisasi dan Anotasi Per Bulan">
+        <section class="card result-details" aria-label="Jadwal Amortisasi dan Anotasi Per Bulan">
           <div class="card-header">
             <div>
-              <h2 class="card-title">Jadwal Amortisasi &amp; Anotasi Lengkap Per Bulan (Tenor <span id="amortTenorSpan">36</span> Bulan)</h2>
+              <h2 class="card-title">Jadwal Angsuran Bulanan (Tenor <span id="amortTenorSpan">36</span> Bulan)</h2>
               <p class="card-subtitle" id="amortSubtitleInfo"></p>
-            </div>
-            <div class="segmented" role="group" aria-label="Metode Jadwal Angsuran">
-              <button type="button" class="active" id="btnAmortAnuitas">Anuitas (Gaya KPR)</button>
-              <button type="button" id="btnAmortFlat">Proporsional Flat</button>
             </div>
           </div>
 
@@ -364,7 +363,6 @@
                   <th class="num">Porsi Bunga</th>
                   <th class="num">Total Angsuran</th>
                   <th class="num">Sisa Pokok</th>
-                  <th class="hide-sm">Progres</th>
                   <th>Anotasi Bulanan</th>
                 </tr>
               </thead>
@@ -404,6 +402,7 @@
     </div>
   </div>
 
+  <script src="js/vehicles.js"></script>
   <script src="js/config.js"></script>
   <script src="js/calculator.js"></script>
   <script src="js/app.js"></script>

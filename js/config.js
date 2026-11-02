@@ -2,7 +2,8 @@
  * Konfigurasi Data, Tabel Referensi & Skema Produk BRI KKB
  * Mencakup:
  * 1. Tiga Skema Fitur: BRI KKB Regular, BRI KKB LNP, BRI KKB Karyawan
- * 2. Wilayah (1, 2, 3), Jenis Pembiayaan, Merk, Tipe Kendaraan, Jenis Bahan Bakar
+ * 2. Wilayah (1, 2, 3), Jenis Pembiayaan, Golongan Kendaraan Asuransi
+ *    Referensi merk, model, dan minimum DP berada di vehicles.js.
  * 3. Tabel Biaya Fidusia
  * 4. Tabel Rate Dasar Asuransi (All Risk & TLO)
  * 5. Tabel Perluasan / Syarat Klaim Asuransi (Banjir, Gempa, SRCC, Terorisme)
@@ -36,19 +37,35 @@
     {
       value: 'New Car',
       label: 'New Car (Kendaraan Baru)',
-      description: 'Pembiayaan unit kendaraan baru melalui dealer rekanan resmi BRI'
+      vehicleType: 'Non Bus dan Non Truk',
+      description: 'Pembiayaan unit kendaraan penumpang baru melalui dealer rekanan resmi BRI'
     },
     {
       value: 'Used Car',
       label: 'Used Car (Kendaraan Bekas)',
+      vehicleType: 'Non Bus dan Non Truk',
       description: 'Pembiayaan unit kendaraan bekas berkualitas melalui showroom/rekanan maupun perorangan'
     },
     {
       value: 'Refinancing',
       label: 'Refinancing (Fasilitas Dana BPKB)',
+      vehicleType: 'Non Bus dan Non Truk',
       description: 'Pembiayaan kembali / multiguna dengan agunan BPKB kendaraan bermotor'
+    },
+    {
+      value: 'Niaga Barang',
+      label: 'Niaga Barang (New Car Commercial)',
+      vehicleType: 'Truk dan Pick up',
+      description: 'Pembiayaan kendaraan niaga barang baru (Truk & Pick Up)'
     }
   ];
+
+  const VEHICLE_TYPE_BY_FINANCING = {
+    'New Car': 'Non Bus dan Non Truk',
+    'Used Car': 'Non Bus dan Non Truk',
+    'Refinancing': 'Non Bus dan Non Truk',
+    'Niaga Barang': 'Truk dan Pick up'
+  };
 
   const VEHICLE_TYPES = [
     {
@@ -60,56 +77,6 @@
       value: 'Truk dan Pick up',
       label: 'Truk dan Pick Up (Niaga Barang)',
       category: 'commercial'
-    },
-    {
-      value: 'Bus',
-      label: 'Bus (Angkutan Penumpang)',
-      category: 'bus'
-    },
-    {
-      value: 'Motor',
-      label: 'Motor (Roda Dua / Big Bike)',
-      category: 'motorcycle'
-    }
-  ];
-
-  const VEHICLE_BRANDS = [
-    { value: 'toyota', label: 'Toyota', origin: 'Jepang', dpModifier: 0 },
-    { value: 'daihatsu', label: 'Daihatsu', origin: 'Jepang', dpModifier: 0 },
-    { value: 'honda', label: 'Honda', origin: 'Jepang', dpModifier: 0 },
-    { value: 'mitsubishi', label: 'Mitsubishi', origin: 'Jepang', dpModifier: 0 },
-    { value: 'suzuki', label: 'Suzuki', origin: 'Jepang', dpModifier: 0 },
-    { value: 'mazda_nissan_isuzu', label: 'Mazda / Nissan / Isuzu', origin: 'Jepang', dpModifier: 0 },
-    { value: 'hyundai_kia', label: 'Hyundai / KIA', origin: 'Korea', dpModifier: 0 },
-    { value: 'byd_wuling_chery', label: 'BYD / Wuling / Chery / Morris Garage', origin: 'China', dpModifier: 2.5 },
-    { value: 'bmw_mercy_euro', label: 'BMW / Mercedes-Benz / Eropa', origin: 'Eropa', dpModifier: 5 },
-    { value: 'other', label: 'Merk Lainnya', origin: 'Lainnya', dpModifier: 5 }
-  ];
-
-  const FUEL_TYPES = [
-    {
-      value: 'bensin',
-      label: 'Bensin (ICE)',
-      dpModifier: 0,
-      badge: 'Konvensional'
-    },
-    {
-      value: 'diesel',
-      label: 'Solar / Diesel (ICE)',
-      dpModifier: 0,
-      badge: 'Konvensional'
-    },
-    {
-      value: 'hybrid',
-      label: 'Hybrid (HEV / PHEV)',
-      dpModifier: -2.5,
-      badge: 'Low Emission'
-    },
-    {
-      value: 'ev',
-      label: 'Listrik Murni (BEV / EV)',
-      dpModifier: -5,
-      badge: 'Green Financing'
     }
   ];
 
@@ -189,17 +156,7 @@
     // Truk dan Pick up
     { type: 'Truk dan Pick up', wilayah: '1', from: 0, to: 99999999999, tlo: 0.88, allRisk: 2.42 },
     { type: 'Truk dan Pick up', wilayah: '2', from: 0, to: 99999999999, tlo: 1.68, allRisk: 2.39 },
-    { type: 'Truk dan Pick up', wilayah: '3', from: 0, to: 99999999999, tlo: 0.81, allRisk: 2.23 },
-
-    // Bus
-    { type: 'Bus', wilayah: '1', from: 0, to: 99999999999, tlo: 0.23, allRisk: 1.04 },
-    { type: 'Bus', wilayah: '2', from: 0, to: 99999999999, tlo: 0.23, allRisk: 1.04 },
-    { type: 'Bus', wilayah: '3', from: 0, to: 99999999999, tlo: 0.18, allRisk: 0.88 },
-
-    // Motor
-    { type: 'Motor', wilayah: '1', from: 0, to: 99999999999, tlo: 1.76, allRisk: 3.50 },
-    { type: 'Motor', wilayah: '2', from: 0, to: 99999999999, tlo: 1.80, allRisk: 3.50 },
-    { type: 'Motor', wilayah: '3', from: 0, to: 99999999999, tlo: 0.67, allRisk: 3.50 }
+    { type: 'Truk dan Pick up', wilayah: '3', from: 0, to: 99999999999, tlo: 0.81, allRisk: 2.23 }
   ];
 
   // Tabel Syarat Klaim / Perluasan Jaminan Asuransi (dalam persen)
@@ -261,28 +218,30 @@
       highlights: [
         'Suku bunga kompetitif mulai 2,99% flat p.a.',
         'Tenor fleksibel 12 s.d. 60 bulan (Refinancing maks. 48 bulan)',
-        'DP minimal mulai 15%–20% (insentif khusus kendaraan EV)',
+        'DP minimum 10%-25% sesuai merk dan tipe kendaraan',
         'Provisi standar 1,00% & Admin Rp 2.000.000'
       ],
       defaultAdmin: 2000000,
       defaultProvisiPct: 1.00,
-      defaultPolis: 50000,
+      defaultPolis: 60000,
       defaultBlokirByFinancing: {
-        'New Car': 0,
+        'New Car': 500000,
         'Used Car': 500000,
-        'Refinancing': 500000
+        'Refinancing': 500000,
+        'Niaga Barang': 500000
       },
-      dpSchemeModifier: 0, // persentase penyesuaian DP minimal
       tenorsByFinancing: {
         'New Car': [12, 24, 36, 48, 60],
         'Used Car': [12, 24, 36, 48, 60],
-        'Refinancing': [12, 24, 36, 48]
+        'Refinancing': [12, 24, 36, 48],
+        'Niaga Barang': [12, 24, 36, 48, 60]
       },
       // Suku bunga Flat p.a. (%) per Jenis Pembiayaan & Tenor
       interestRates: {
         'New Car': { 12: 2.99, 24: 3.45, 36: 3.75, 48: 4.15, 60: 4.55 },
         'Used Car': { 12: 5.25, 24: 5.75, 36: 6.25, 48: 6.75, 60: 7.25 },
-        'Refinancing': { 12: 6.50, 24: 7.00, 36: 7.50, 48: 8.00, 60: 8.50 }
+        'Refinancing': { 12: 6.50, 24: 7.00, 36: 7.50, 48: 8.00, 60: 8.50 },
+        'Niaga Barang': { 12: 9.10, 24: 10.23, 36: 10.38, 48: 10.63, 60: 10.85 }
       }
     },
 
@@ -294,27 +253,29 @@
       highlights: [
         'Special rate Prioritas mulai 2,55% flat p.a.',
         'Diskon 50% Biaya Provisi (0,50%) & Admin ringan Rp 1.250.000',
-        'Relaksasi DP minimal -5% untuk nasabah kelolaan Prioritas',
+        'DP minimum sesuai tabel merk dan tipe kendaraan',
         'Proses persetujuan jalur cepat (Fast Track RM Prioritas)'
       ],
       defaultAdmin: 1250000,
       defaultProvisiPct: 0.50,
-      defaultPolis: 50000,
+      defaultPolis: 60000,
       defaultBlokirByFinancing: {
-        'New Car': 0,
+        'New Car': 500000,
         'Used Car': 500000,
-        'Refinancing': 500000
+        'Refinancing': 500000,
+        'Niaga Barang': 500000
       },
-      dpSchemeModifier: -5,
       tenorsByFinancing: {
         'New Car': [12, 24, 36, 48, 60],
         'Used Car': [12, 24, 36, 48, 60],
-        'Refinancing': [12, 24, 36, 48]
+        'Refinancing': [12, 24, 36, 48],
+        'Niaga Barang': [12, 24, 36, 48, 60]
       },
       interestRates: {
         'New Car': { 12: 2.55, 24: 2.88, 36: 3.18, 48: 3.58, 60: 3.98 },
         'Used Car': { 12: 4.50, 24: 4.95, 36: 5.45, 48: 5.95, 60: 6.45 },
-        'Refinancing': { 12: 5.75, 24: 6.25, 36: 6.75, 48: 7.25, 60: 7.75 }
+        'Refinancing': { 12: 5.75, 24: 6.25, 36: 6.75, 48: 7.25, 60: 7.75 },
+        'Niaga Barang': { 12: 8.21, 24: 8.87, 36: 9.31, 48: 9.68, 60: 10.01 }
       }
     },
 
@@ -326,65 +287,43 @@
       highlights: [
         'Suku bunga spesial karyawan mulai 2,35% flat p.a.',
         'Keringanan Biaya Admin Rp 1.000.000 & Provisi ringan 0,25%',
-        'Relaksasi DP minimal -5% (mulai 10% untuk EV / New Car)',
+        'DP minimum sesuai tabel merk dan tipe kendaraan',
         'Potong gaji otomatis (Auto-Debet Payroll) s.d. 60 bulan'
       ],
       defaultAdmin: 1000000,
       defaultProvisiPct: 0.25,
-      defaultPolis: 50000,
+      defaultPolis: 60000,
       defaultBlokirByFinancing: {
-        'New Car': 0,
-        'Used Car': 350000,
-        'Refinancing': 350000
+        'New Car': 500000,
+        'Used Car': 500000,
+        'Refinancing': 500000,
+        'Niaga Barang': 500000
       },
-      dpSchemeModifier: -5,
       tenorsByFinancing: {
         'New Car': [12, 24, 36, 48, 60],
         'Used Car': [12, 24, 36, 48, 60],
-        'Refinancing': [12, 24, 36, 48, 60]
+        'Refinancing': [12, 24, 36, 48, 60],
+        'Niaga Barang': [12, 24, 36, 48, 60]
       },
       interestRates: {
         'New Car': { 12: 2.35, 24: 2.65, 36: 2.95, 48: 3.35, 60: 3.75 },
         'Used Car': { 12: 4.25, 24: 4.75, 36: 5.25, 48: 5.75, 60: 6.25 },
-        'Refinancing': { 12: 5.50, 24: 6.00, 36: 6.50, 48: 7.00, 60: 7.50 }
+        'Refinancing': { 12: 5.50, 24: 6.00, 36: 6.50, 48: 7.00, 60: 7.50 },
+        'Niaga Barang': { 12: 7.30, 24: 7.96, 36: 8.41, 48: 8.80, 60: 9.15 }
       }
-    }
-  };
-
-  // Aturan Dasar Minimal DP (%) sebelum modifier Merk, Bahan Bakar, dan Skema
-  const BASE_MIN_DP_BY_FINANCING = {
-    'New Car': {
-      'Non Bus dan Non Truk': 20,
-      'Truk dan Pick up': 25,
-      'Bus': 25,
-      'Motor': 15
-    },
-    'Used Car': {
-      'Non Bus dan Non Truk': 25,
-      'Truk dan Pick up': 30,
-      'Bus': 30,
-      'Motor': 20
-    },
-    'Refinancing': {
-      'Non Bus dan Non Truk': 15,
-      'Truk dan Pick up': 20,
-      'Bus': 20,
-      'Motor': 20
     }
   };
 
   global.KKBConfig = {
     WILAYAH_OPTIONS,
     FINANCING_TYPES,
+    VEHICLE_TYPE_BY_FINANCING,
     VEHICLE_TYPES,
-    VEHICLE_BRANDS,
-    FUEL_TYPES,
     COVERAGE_OPTIONS,
     FIDUSIA_TABLE,
     INSURANCE_BASE_RATES,
     INSURANCE_PERILS,
     DEPRECIATION_BY_YEAR,
-    DEFAULT_SCHEMES,
-    BASE_MIN_DP_BY_FINANCING
+    DEFAULT_SCHEMES
   };
 })(window);
