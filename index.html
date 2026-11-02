@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kalkulator Simulasi BRI KKB Debitur — Regular, LNP &amp; Karyawan</title>
+  <meta name="description" content="Kalkulator Simulasi Kredit Kendaraan Bermotor (KKB) BRI untuk skema Regular, LNP (Layanan Nasabah Prioritas), dan Karyawan lengkap dengan perhitungan TDP, Asuransi, Fidusia, dan Amortisasi Bulanan." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- ======================== HERO HEADER ======================== -->
+  <header class="hero-header">
+    <div class="container">
+      <div class="topbar">
+        <div class="brand-mark">
+          <div class="brand-logo" aria-hidden="true">BRI</div>
+          <div>
+            <h1 class="brand-title">Kalkulator Simulasi KKB Debitur</h1>
+            <p class="brand-subtitle">Simulasi Kredit Kendaraan Bermotor BRI • Bundling Asuransi, Biaya Kredit &amp; Jadwal Amortisasi Bulanan</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button type="button" class="btn btn-glass" id="btnOpenRefModal">
+            <span>⚙</span> Tabel Rate &amp; Parameter
+          </button>
+          <button type="button" class="btn btn-glass" id="btnExportCsv">
+            <span>⬇</span> Ekspor CSV
+          </button>
+          <button type="button" class="btn btn-orange" id="btnPrintPdf">
+            <span>🖨</span> Cetak / Simpan PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ======================== PILIHAN 3 FITUR SKEMA KKB ======================== -->
+    <section class="scheme-section" aria-label="Pilih Skema Produk BRI KKB">
+      <div class="scheme-grid" id="schemeSelectorGrid">
+        <!-- Kartu 1: BRI KKB Regular -->
+        <button type="button" class="scheme-card active" data-scheme="regular">
+          <div class="scheme-card-top">
+            <div class="scheme-icon">🚗</div>
+            <div>
+              <span class="scheme-badge">Umum &amp; Wiraswasta</span>
+              <h2 class="scheme-name">1. BRI KKB Regular</h2>
+            </div>
+          </div>
+          <p class="scheme-desc">Skema standar pembiayaan kendaraan bermotor untuk nasabah umum, profesional, dan wiraswasta.</p>
+          <div class="scheme-meta-strip">
+            <span class="meta-pill" id="metaRateRegular">Bunga mulai 2,99%</span>
+            <span class="meta-pill">Provisi 1,00%</span>
+            <span class="meta-pill">Admin Rp 2,0 Jt</span>
+          </div>
+        </button>
+
+        <!-- Kartu 2: BRI KKB LNP -->
+        <button type="button" class="scheme-card" data-scheme="lnp">
+          <div class="scheme-card-top">
+            <div class="scheme-icon">💎</div>
+            <div>
+              <span class="scheme-badge">Nasabah Prioritas</span>
+              <h2 class="scheme-name">2. BRI KKB LNP</h2>
+            </div>
+          </div>
+          <p class="scheme-desc">Privilege khusus Layanan Nasabah Prioritas (BRI Prioritas &amp; Private) dengan bunga spesial &amp; diskon provisi.</p>
+          <div class="scheme-meta-strip">
+            <span class="meta-pill" id="metaRateLnp">Bunga mulai 2,55%</span>
+            <span class="meta-pill">Provisi 0,50%</span>
+            <span class="meta-pill">Relaksasi Min. DP -5%</span>
+          </div>
+        </button>
+
+        <!-- Kartu 3: BRI KKB Karyawan -->
+        <button type="button" class="scheme-card" data-scheme="karyawan">
+          <div class="scheme-card-top">
+            <div class="scheme-icon">🏢</div>
+            <div>
+              <span class="scheme-badge">Payroll &amp; Pekerja BRI Group</span>
+              <h2 class="scheme-name">3. BRI KKB Karyawan</h2>
+            </div>
+          </div>
+          <p class="scheme-desc">Program khusus pekerja tetap / Payroll BRI, BUMN, ASN &amp; mitra instansi dengan rate terendah s.d. 60 bulan.</p>
+          <div class="scheme-meta-strip">
+            <span class="meta-pill" id="metaRateKaryawan">Bunga mulai 2,35%</span>
+            <span class="meta-pill">Provisi 0,25%</span>
+            <span class="meta-pill">Admin Rp 1,0 Jt</span>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- ======================== WORKSPACE 2 KOLOM ======================== -->
+    <div class="workspace-grid">
+      <!-- ==================== KOLOM KIRI: FORM INPUTAN ==================== -->
+      <aside class="panel" aria-label="Form Parameter Input KKB">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <span class="panel-step-badge">1</span>
+            <div>
+              <h3 class="panel-title">Input Data Kredit &amp; Kendaraan</h3>
+              <p class="panel-subtitle" id="activeSchemeSubtitle">Skema Aktif: BRI KKB Regular</p>
+            </div>
+          </div>
+          <button type="button" class="btn btn-outline btn-xs" id="btnResetForm">Reset</button>
+        </div>
+
+        <div class="panel-body">
+          <!-- Seksi A: Wilayah & Jenis Pembiayaan -->
+          <div class="form-section-divider">Wilayah &amp; Jenis Kredit</div>
+
+          <div class="form-group">
+            <label class="form-label" for="inputWilayah">
+              <span>1. Wilayah Kendaraan (Plat Nomor)</span>
+              <span class="label-hint">Kode 1 / 2 / 3</span>
+            </label>
+            <select id="inputWilayah" class="select-control">
+              <option value="1">1 — Pulau Sumatera</option>
+              <option value="2" selected>2 — DKI Jakarta &amp; Banten</option>
+              <option value="3">3 — Selain Wilayah 1 &amp; 2</option>
+            </select>
+            <div class="field-caption" id="wilayahDescription">
+              Wilayah 2 : DKI Jakarta &amp; Banten (termasuk wilayah Jabodetabek/Jabar sesuai ketentuan OJK)
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inputFinancingType">
+              <span>2. Jenis Pembiayaan</span>
+            </label>
+            <select id="inputFinancingType" class="select-control">
+              <option value="New Car" selected>New Car (Kendaraan Baru)</option>
+              <option value="Used Car">Used Car (Kendaraan Bekas)</option>
+              <option value="Refinancing">Refinancing (Fasilitas Dana BPKB)</option>
+            </select>
+            <div class="field-caption" id="financingDescription">
+              Pembiayaan unit kendaraan baru melalui dealer rekanan resmi BRI
+            </div>
+          </div>
+
+          <!-- Seksi B: Spesifikasi & Harga Kendaraan -->
+          <div class="form-section-divider">Spesifikasi, Harga &amp; Down Payment</div>
+
+          <div class="form-group">
+            <label class="form-label" for="inputVehicleType">
+              <span>Kategori / Tipe Kendaraan</span>
+              <span class="label-hint">Penentu Rate Asuransi &amp; DP</span>
+            </label>
+            <select id="inputVehicleType" class="select-control"></select>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="inputBrand">
+                <span>Merk Kendaraan</span>
+              </label>
+              <select id="inputBrand" class="select-control"></select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="inputFuel">
+                <span>Jenis Bahan Bakar</span>
+              </label>
+              <select id="inputFuel" class="select-control"></select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inputVehiclePrice">
+              <span>3. Harga Kendaraan (OTR / Taksasi)</span>
+              <span class="label-hint">Input Bebas</span>
+            </label>
+            <div class="input-prefix-wrap">
+              <span class="input-addon-left">Rp</span>
+              <input
+                type="text"
+                id="inputVehiclePrice"
+                class="input-control"
+                inputmode="numeric"
+                value="350.000.000"
+                autocomplete="off"
+              />
+            </div>
+            <div class="quick-chips" aria-label="Preset Harga Kendaraan">
+              <button type="button" class="chip-btn" data-price="180000000">180 Jt</button>
+              <button type="button" class="chip-btn" data-price="250000000">250 Jt</button>
+              <button type="button" class="chip-btn" data-price="350000000">350 Jt</button>
+              <button type="button" class="chip-btn" data-price="500000000">500 Jt</button>
+              <button type="button" class="chip-btn" data-price="850000000">850 Jt</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <label for="inputDpValue">4. Down Payment (Uang Muka Murni)</label>
+              <div class="dp-mode-toggle" role="group" aria-label="Mode Input DP">
+                <button type="button" class="dp-mode-btn active" id="btnDpModePct" data-mode="pct">Persen (%)</button>
+                <button type="button" class="dp-mode-btn" id="btnDpModeRp" data-mode="rp">Rupiah (Rp)</button>
+              </div>
+            </div>
+
+            <div id="dpInputWrap" class="input-suffix-wrap">
+              <span class="input-addon-left" id="dpAddonLeft" style="display:none;">Rp</span>
+              <input
+                type="text"
+                id="inputDpValue"
+                class="input-control"
+                inputmode="decimal"
+                value="20"
+                autocomplete="off"
+              />
+              <span class="input-addon-right" id="dpAddonRight">%</span>
+            </div>
+
+            <div class="field-caption" id="dpConvertedCaption">
+              Nominal DP Murni: <strong>Rp 70.000.000</strong> (Pokok Hutang: Rp 280.000.000)
+            </div>
+
+            <div class="dp-status-box" id="dpMinBox">
+              <div>
+                <div id="dpMinText"><strong>Minimal DP: 20%</strong> (Rp 70.000.000)</div>
+                <div class="dp-factors-list" id="dpFactorsList"></div>
+              </div>
+              <button type="button" class="btn btn-outline btn-xs" id="btnApplyMinDp">Gunakan Min</button>
+            </div>
+          </div>
+
+          <!-- Seksi C: Asuransi Bundling & Perluasan -->
+          <div class="form-section-divider">Bundling Asuransi &amp; Klaim</div>
+
+          <div class="form-group">
+            <label class="form-label" for="inputCoverage">
+              <span>5. Asuransi Coverage</span>
+              <span class="label-hint">Bundling KKB</span>
+            </label>
+            <select id="inputCoverage" class="select-control"></select>
+            <div class="coverage-criteria-box" id="coverageCriteriaText"></div>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <span>Syarat Klaim / Perluasan Jaminan</span>
+              <button type="button" class="btn btn-outline btn-xs" id="btnSelectAllPerils">Pilih Semua</button>
+            </div>
+            <div class="peril-grid" id="perilCheckboxesContainer">
+              <!-- Diisi dinamis sesuai Wilayah & Coverage -->
+            </div>
+          </div>
+
+          <!-- Seksi D: Biaya Kredit -->
+          <div class="form-section-divider">Komponen Biaya Kredit</div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="inputAdminFee">
+                <span>6. Biaya Admin</span>
+              </label>
+              <div class="input-prefix-wrap">
+                <span class="input-addon-left">Rp</span>
+                <input
+                  type="text"
+                  id="inputAdminFee"
+                  class="input-control"
+                  inputmode="numeric"
+                  value="2.000.000"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="inputProvisiPct">
+                <span>7. Biaya Provisi (%)</span>
+              </label>
+              <div class="input-suffix-wrap">
+                <input
+                  type="text"
+                  id="inputProvisiPct"
+                  class="input-control"
+                  inputmode="decimal"
+                  value="1,00"
+                  autocomplete="off"
+                />
+                <span class="input-addon-right">%</span>
+              </div>
+              <div class="field-caption" id="provisiRpCaption">= Rp 3.500.000</div>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="inputPolisFee">
+                <span>Biaya Polis</span>
+              </label>
+              <div class="input-prefix-wrap">
+                <span class="input-addon-left">Rp</span>
+                <input
+                  type="text"
+                  id="inputPolisFee"
+                  class="input-control"
+                  inputmode="numeric"
+                  value="50.000"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="inputBlokirFee">
+                <span>Blokir BPKB</span>
+              </label>
+              <div class="input-prefix-wrap">
+                <span class="input-addon-left">Rp</span>
+                <input
+                  type="text"
+                  id="inputBlokirFee"
+                  class="input-control"
+                  inputmode="numeric"
+                  value="0"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="readonly-fee-card">
+              <div>
+                <strong>Biaya Fidusia Otomatis</strong>
+                <div style="font-size:0.72rem; color:var(--text-muted);" id="fidusiaBracketInfo">
+                  Rentang: Rp 250.000.001 – Rp 500.000.000
+                </div>
+              </div>
+              <span class="readonly-fee-val" id="fidusiaFeeDisplay">Rp 550.000</span>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="inputInstallmentType">
+              <span>Skema Pembayaran Angsuran</span>
+            </label>
+            <select id="inputInstallmentType" class="select-control">
+              <option value="ADDB" selected>ADDB — TDP = DP + Asuransi + Biaya Kredit (Standar)</option>
+              <option value="ADDM">ADDM — Angsuran Pertama Dibayar di Muka (+masuk TDP)</option>
+            </select>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ==================== KOLOM KANAN: HASIL SIMULASI ==================== -->
+      <div class="output-stack">
+        <!-- 1. KPI Executive Summary Cards -->
+        <section class="kpi-hero-grid" aria-label="Ringkasan Hasil Tenor Terpilih">
+          <div class="kpi-card primary-highlight">
+            <div class="kpi-label" id="kpiTenorLabel">Angsuran / Bulan (Tenor 36 Bln)</div>
+            <div class="kpi-value" id="kpiMonthlyInstallment">Rp 8.648.889</div>
+            <div class="kpi-sub" id="kpiRateInfo">
+              Bunga Flat 3,75% p.a. (Setara ~6,88% Efektif)
+            </div>
+          </div>
+
+          <div class="kpi-card orange-highlight">
+            <div class="kpi-label">Total Down Payment (TDP)</div>
+            <div class="kpi-value" id="kpiTotalDp">Rp 94.008.500</div>
+            <div class="kpi-sub" id="kpiTdpSub">
+              DP Murni + Premi Asuransi + Biaya Kredit
+            </div>
+          </div>
+
+          <div class="kpi-card teal-highlight">
+            <div class="kpi-label">Pokok Hutang (Plafon Kredit)</div>
+            <div class="kpi-value" id="kpiPrincipalLoan">Rp 280.000.000</div>
+            <div class="kpi-sub" id="kpiTotalInterestSub">
+              Total Bunga Kredit: Rp 31.500.000
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. OUTPUT UTAMA #1: Tabel Tenor (bulan) | Angsuran | Total DP -->
+        <section class="panel" aria-label="Tabel Perbandingan Tenor">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="panel-step-badge">2</span>
+              <div>
+                <h3 class="panel-title">Tabel Simulasi Tenor, Angsuran &amp; Total DP</h3>
+                <p class="panel-subtitle">Klik salah satu baris tenor (12 / 24 / 36 / 48 / 60 bulan) untuk melihat rincian &amp; jadwal per bulan di bawah</p>
+              </div>
+            </div>
+            <span class="scheme-badge" id="tableSchemeBadge">BRI KKB Regular</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="tenorSummaryTable">
+              <thead>
+                <tr>
+                  <th>Tenor (Bulan)</th>
+                  <th class="num">Suku Bunga</th>
+                  <th class="num">Premi Asuransi</th>
+                  <th class="num">Biaya Kredit</th>
+                  <th class="num">Angsuran / Bulan</th>
+                  <th class="num">Total DP (TDP)</th>
+                </tr>
+              </thead>
+              <tbody id="tenorSummaryBody">
+                <!-- Diisi dinamis -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 3. Perbandingan Cepat 3 Skema (Regular vs LNP vs Karyawan) -->
+        <section class="panel" aria-label="Perbandingan Lintas Skema BRI KKB">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="panel-step-badge">3</span>
+              <div>
+                <h3 class="panel-title">Perbandingan 3 Fitur Skema pada Tenor <span id="compTenorSpan">36</span> Bulan</h3>
+                <p class="panel-subtitle">Perbedaan otomatis Suku Bunga, Biaya Admin, Provisi &amp; TDP antar BRI KKB Regular, LNP, dan Karyawan</p>
+              </div>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Skema Produk</th>
+                  <th class="num">Bunga Flat p.a.</th>
+                  <th class="num">Biaya Admin</th>
+                  <th class="num">Provisi</th>
+                  <th class="num">Angsuran / Bln</th>
+                  <th class="num">Total DP (TDP)</th>
+                  <th class="num">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="schemeComparisonBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 4. Bedah Rumus TDP, Biaya Kredit & Rincian Premi Asuransi per Tahun -->
+        <section class="panel" aria-label="Rincian Rumus TDP, Biaya Kredit, dan Asuransi">
+          <div class="panel-header">
+            <div class="panel-title-wrap">
+              <span class="panel-step-badge">4</span>
+              <div>
+                <h3 class="panel-title">Rincian Rumus TDP, Biaya Kredit &amp; Depresiasi Asuransi (Tenor <span id="detailTenorSpan">36</span> Bulan)</h3>
+                <p class="panel-subtitle">TDP = DP + Asuransi + Biaya Kredit • Biaya Kredit = Admin + Provisi + Polis + Fidusia + Blokir BPKB</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-body">
+            <div class="breakdown-grid">
+              <!-- Donut Chart Komposisi TDP -->
+              <div class="donut-box">
+                <div id="tdpDonutSvgContainer" aria-label="Grafik Komposisi TDP"></div>
+                <div class="donut-legend" id="tdpDonutLegend"></div>
+              </div>
+
+              <!-- Daftar Rumus Eksplisit -->
+              <div class="formula-list" id="formulaBreakdownList">
+                <!-- Diisi dinamis -->
+              </div>
+            </div>
+
+            <!-- Sub-tabel Perhitungan Asuransi & Depresiasi per Tahun -->
+            <div class="form-section-divider" style="margin-top:24px;">
+              Rincian Premi Asuransi &amp; Depresiasi per Tahun
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Tahun Ke-</th>
+                    <th>Depresiasi</th>
+                    <th class="num">Nilai Pertanggungan</th>
+                    <th>Coverage</th>
+                    <th class="num">Rate Dasar</th>
+                    <th class="num">Rate Perluasan</th>
+                    <th class="num">Premi Tahun Ini</th>
+                  </tr>
+                </thead>
+                <tbody id="yearlyInsuranceBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. OUTPUT UTAMA #2: Anotasi & Jadwal Amortisasi Lengkap Per Bulan (Setara KPR) -->
+        <section class="panel" aria-label="Jadwal Amortisasi dan Anotasi Per Bulan">
+          <div class="panel-header amort-toolbar">
+            <div class="panel-title-wrap">
+              <span class="panel-step-badge">5</span>
+              <div>
+                <h3 class="panel-title">Jadwal Amortisasi &amp; Anotasi Lengkap Per Bulan (Tenor <span id="amortTenorSpan">36</span> Bulan)</h3>
+                <p class="panel-subtitle" id="amortSubtitleInfo">
+                  Rincian angsuran pokok, bunga, sisa pinjaman, progres pelunasan &amp; catatan proteksi asuransi tiap bulan
+                </p>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <div class="dp-mode-toggle" role="group" aria-label="Metode Tabel Amortisasi">
+                <button type="button" class="dp-mode-btn active" id="btnAmortAnuitas" data-amort="anuitas">
+                  Anuitas / Efektif (Gaya KPR)
+                </button>
+                <button type="button" class="dp-mode-btn" id="btnAmortFlat" data-amort="flat">
+                  Proporsional Flat
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grafik Progres Sisa Pokok vs Akumulasi Pembayaran -->
+          <div class="chart-container" id="amortChartContainer"></div>
+
+          <div class="amort-scroll">
+            <table class="data-table" id="amortizationTable">
+              <thead>
+                <tr>
+                  <th>Bln</th>
+                  <th class="num">Pinjaman Awal</th>
+                  <th class="num">Porsi Pokok</th>
+                  <th class="num">Porsi Bunga</th>
+                  <th class="num">Total Angsuran</th>
+                  <th class="num">Sisa Pokok</th>
+                  <th>Progres</th>
+                  <th>Anotasi &amp; Status Proteksi</th>
+                </tr>
+              </thead>
+              <tbody id="amortizationBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer-note">
+    Simulasi Kalkulator BRI KKB Debitur (BRI KKB Regular • BRI KKB LNP • BRI KKB Karyawan). Angka simulasi bersifat estimasi mengacu pada parameter rate, tabel fidusia, dan ketentuan tarif asuransi OJK.
+  </footer>
+
+  <!-- ======================== MODAL TABEL REFERENSI & KUSTOMISASI RATE ======================== -->
+  <div class="modal-backdrop" id="refModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="refModalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="refModalTitle">Tabel Ketentuan Referensi &amp; Kustomisasi Rate BRI KKB</h3>
+        <button type="button" class="modal-close" id="btnCloseRefModal" aria-label="Tutup">✕</button>
+      </div>
+
+      <div class="modal-tabs" role="tablist">
+        <button type="button" class="modal-tab active" data-tab="tabRates">Suku Bunga &amp; Basis Rumus</button>
+        <button type="button" class="modal-tab" data-tab="tabInsBase">Tabel Rate Dasar Asuransi</button>
+        <button type="button" class="modal-tab" data-tab="tabInsPeril">Tabel Perluasan Klaim &amp; Depresiasi</button>
+        <button type="button" class="modal-tab" data-tab="tabFidusia">Tabel Biaya Fidusia</button>
+      </div>
+
+      <div class="modal-body" id="refModalContent">
+        <!-- Diisi dinamis oleh app.js -->
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/calculator.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

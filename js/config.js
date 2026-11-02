@@ -1,0 +1,390 @@
+/**
+ * Konfigurasi Data, Tabel Referensi & Skema Produk BRI KKB
+ * Mencakup:
+ * 1. Tiga Skema Fitur: BRI KKB Regular, BRI KKB LNP, BRI KKB Karyawan
+ * 2. Wilayah (1, 2, 3), Jenis Pembiayaan, Merk, Tipe Kendaraan, Jenis Bahan Bakar
+ * 3. Tabel Biaya Fidusia
+ * 4. Tabel Rate Dasar Asuransi (All Risk & TLO)
+ * 5. Tabel Perluasan / Syarat Klaim Asuransi (Banjir, Gempa, SRCC, Terorisme)
+ * 6. Tabel Depresiasi Nilai Pertanggungan per Tahun
+ */
+(function (global) {
+  'use strict';
+
+  const WILAYAH_OPTIONS = [
+    {
+      value: '1',
+      label: 'Wilayah 1 — Pulau Sumatera',
+      shortLabel: 'Wilayah 1',
+      description: 'Pulau Sumatera dan kepulauan di sekitarnya'
+    },
+    {
+      value: '2',
+      label: 'Wilayah 2 — DKI Jakarta & Banten',
+      shortLabel: 'Wilayah 2',
+      description: 'DKI Jakarta & Banten (termasuk wilayah Jabodetabek/Jabar sesuai ketentuan OJK)'
+    },
+    {
+      value: '3',
+      label: 'Wilayah 3 — Selain Wilayah 1 & 2',
+      shortLabel: 'Wilayah 3',
+      description: 'Jawa Tengah, DI Yogyakarta, Jawa Timur, Bali, Kalimantan, Sulawesi, NTB, NTT, Maluku & Papua'
+    }
+  ];
+
+  const FINANCING_TYPES = [
+    {
+      value: 'New Car',
+      label: 'New Car (Kendaraan Baru)',
+      description: 'Pembiayaan unit kendaraan baru melalui dealer rekanan resmi BRI'
+    },
+    {
+      value: 'Used Car',
+      label: 'Used Car (Kendaraan Bekas)',
+      description: 'Pembiayaan unit kendaraan bekas berkualitas melalui showroom/rekanan maupun perorangan'
+    },
+    {
+      value: 'Refinancing',
+      label: 'Refinancing (Fasilitas Dana BPKB)',
+      description: 'Pembiayaan kembali / multiguna dengan agunan BPKB kendaraan bermotor'
+    }
+  ];
+
+  const VEHICLE_TYPES = [
+    {
+      value: 'Non Bus dan Non Truk',
+      label: 'Non Bus dan Non Truk (Mobil Penumpang)',
+      category: 'passenger'
+    },
+    {
+      value: 'Truk dan Pick up',
+      label: 'Truk dan Pick Up (Niaga Barang)',
+      category: 'commercial'
+    },
+    {
+      value: 'Bus',
+      label: 'Bus (Angkutan Penumpang)',
+      category: 'bus'
+    },
+    {
+      value: 'Motor',
+      label: 'Motor (Roda Dua / Big Bike)',
+      category: 'motorcycle'
+    }
+  ];
+
+  const VEHICLE_BRANDS = [
+    { value: 'toyota', label: 'Toyota', origin: 'Jepang', dpModifier: 0 },
+    { value: 'daihatsu', label: 'Daihatsu', origin: 'Jepang', dpModifier: 0 },
+    { value: 'honda', label: 'Honda', origin: 'Jepang', dpModifier: 0 },
+    { value: 'mitsubishi', label: 'Mitsubishi', origin: 'Jepang', dpModifier: 0 },
+    { value: 'suzuki', label: 'Suzuki', origin: 'Jepang', dpModifier: 0 },
+    { value: 'mazda_nissan_isuzu', label: 'Mazda / Nissan / Isuzu', origin: 'Jepang', dpModifier: 0 },
+    { value: 'hyundai_kia', label: 'Hyundai / KIA', origin: 'Korea', dpModifier: 0 },
+    { value: 'byd_wuling_chery', label: 'BYD / Wuling / Chery / Morris Garage', origin: 'China', dpModifier: 2.5 },
+    { value: 'bmw_mercy_euro', label: 'BMW / Mercedes-Benz / Eropa', origin: 'Eropa', dpModifier: 5 },
+    { value: 'other', label: 'Merk Lainnya', origin: 'Lainnya', dpModifier: 5 }
+  ];
+
+  const FUEL_TYPES = [
+    {
+      value: 'bensin',
+      label: 'Bensin (ICE)',
+      dpModifier: 0,
+      badge: 'Konvensional'
+    },
+    {
+      value: 'diesel',
+      label: 'Solar / Diesel (ICE)',
+      dpModifier: 0,
+      badge: 'Konvensional'
+    },
+    {
+      value: 'hybrid',
+      label: 'Hybrid (HEV / PHEV)',
+      dpModifier: -2.5,
+      badge: 'Low Emission'
+    },
+    {
+      value: 'ev',
+      label: 'Listrik Murni (BEV / EV)',
+      dpModifier: -5,
+      badge: 'Green Financing'
+    }
+  ];
+
+  const COVERAGE_OPTIONS = [
+    {
+      value: 'AllRisk',
+      label: 'All Risk (Comprehensive)',
+      allRiskYears: 99,
+      criteria: 'Meliputi semua jenis risiko (kecelakaan ringan / berat / kehilangan / dll) selama seluruh masa tenor kredit.'
+    },
+    {
+      value: 'Kombinasi#1',
+      label: 'Kombinasi #1 (1 Thn All Risk + TLO)',
+      allRiskYears: 1,
+      criteria: '1 Tahun pertama All Risk, tahun-tahun selanjutnya menggunakan proteksi TLO.'
+    },
+    {
+      value: 'Kombinasi#2',
+      label: 'Kombinasi #2 (2 Thn All Risk + TLO)',
+      allRiskYears: 2,
+      criteria: '2 Tahun pertama All Risk, tahun-tahun selanjutnya menggunakan proteksi TLO.'
+    },
+    {
+      value: 'Kombinasi#3',
+      label: 'Kombinasi #3 (3 Thn All Risk + TLO)',
+      allRiskYears: 3,
+      criteria: '3 Tahun pertama All Risk, tahun-tahun selanjutnya menggunakan proteksi TLO.'
+    },
+    {
+      value: 'Kombinasi#4',
+      label: 'Kombinasi #4 (4 Thn All Risk + TLO)',
+      allRiskYears: 4,
+      criteria: '4 Tahun pertama All Risk, tahun-tahun selanjutnya menggunakan proteksi TLO.'
+    },
+    {
+      value: 'TLO',
+      label: 'TLO (Total Loss Only)',
+      allRiskYears: 0,
+      criteria: 'Menjamin kerugian jika kendaraan mengalami kerusakan total (tingkat kerusakan minimal 70%) atau hilang karena pencurian dengan nilai coverage senilai harga kendaraan setelah depresiasi (sesuai penilaian pihak Asuransi).'
+    }
+  ];
+
+  // Tabel Biaya Fidusia berdasarkan rentang Nilai Penjaminan (Harga Kendaraan)
+  const FIDUSIA_TABLE = [
+    { from: 0, to: 50000000, fee: 150000, label: 's.d. Rp 50.000.000' },
+    { from: 50000001, to: 100000000, fee: 200000, label: 'Rp 50.000.001 – Rp 100.000.000' },
+    { from: 100000001, to: 250000000, fee: 350000, label: 'Rp 100.000.001 – Rp 250.000.000' },
+    { from: 250000001, to: 500000000, fee: 550000, label: 'Rp 250.000.001 – Rp 500.000.000' },
+    { from: 500000001, to: 1000000000, fee: 1000000, label: 'Rp 500.000.001 – Rp 1.000.000.000' },
+    { from: 1000000001, to: 2500000001, fee: 2000000, label: 'Rp 1.000.000.001 – Rp 2.500.000.001' },
+    { from: 2500000002, to: Infinity, fee: 2500000, label: '> Rp 2.500.000.001' }
+  ];
+
+  // Tabel Rate Dasar Asuransi (dalam persen, contoh 3.82 berarti 3,82%)
+  const INSURANCE_BASE_RATES = [
+    // Non Bus dan Non Truk - Wilayah 1
+    { type: 'Non Bus dan Non Truk', wilayah: '1', from: 0, to: 125000000, tlo: 0.47, allRisk: 3.82 },
+    { type: 'Non Bus dan Non Truk', wilayah: '1', from: 125000001, to: 200000000, tlo: 0.63, allRisk: 2.67 },
+    { type: 'Non Bus dan Non Truk', wilayah: '1', from: 200000001, to: 400000000, tlo: 0.41, allRisk: 2.18 },
+    { type: 'Non Bus dan Non Truk', wilayah: '1', from: 400000001, to: 800000000, tlo: 0.25, allRisk: 1.20 },
+    { type: 'Non Bus dan Non Truk', wilayah: '1', from: 800000001, to: 20000000000, tlo: 0.20, allRisk: 1.05 },
+
+    // Non Bus dan Non Truk - Wilayah 2
+    { type: 'Non Bus dan Non Truk', wilayah: '2', from: 0, to: 125000000, tlo: 0.65, allRisk: 3.26 },
+    { type: 'Non Bus dan Non Truk', wilayah: '2', from: 125000001, to: 200000000, tlo: 0.44, allRisk: 2.47 },
+    { type: 'Non Bus dan Non Truk', wilayah: '2', from: 200000001, to: 400000000, tlo: 0.38, allRisk: 2.08 },
+    { type: 'Non Bus dan Non Truk', wilayah: '2', from: 400000001, to: 800000000, tlo: 0.25, allRisk: 1.20 },
+    { type: 'Non Bus dan Non Truk', wilayah: '2', from: 800000001, to: 20000000000, tlo: 0.20, allRisk: 1.05 },
+
+    // Non Bus dan Non Truk - Wilayah 3
+    { type: 'Non Bus dan Non Truk', wilayah: '3', from: 0, to: 125000000, tlo: 0.51, allRisk: 2.53 },
+    { type: 'Non Bus dan Non Truk', wilayah: '3', from: 125000001, to: 200000000, tlo: 0.44, allRisk: 2.69 },
+    { type: 'Non Bus dan Non Truk', wilayah: '3', from: 200000001, to: 400000000, tlo: 0.29, allRisk: 1.79 },
+    { type: 'Non Bus dan Non Truk', wilayah: '3', from: 400000001, to: 800000000, tlo: 0.23, allRisk: 1.14 },
+    { type: 'Non Bus dan Non Truk', wilayah: '3', from: 800000001, to: 20000000000, tlo: 0.20, allRisk: 1.05 },
+
+    // Truk dan Pick up
+    { type: 'Truk dan Pick up', wilayah: '1', from: 0, to: 99999999999, tlo: 0.88, allRisk: 2.42 },
+    { type: 'Truk dan Pick up', wilayah: '2', from: 0, to: 99999999999, tlo: 1.68, allRisk: 2.39 },
+    { type: 'Truk dan Pick up', wilayah: '3', from: 0, to: 99999999999, tlo: 0.81, allRisk: 2.23 },
+
+    // Bus
+    { type: 'Bus', wilayah: '1', from: 0, to: 99999999999, tlo: 0.23, allRisk: 1.04 },
+    { type: 'Bus', wilayah: '2', from: 0, to: 99999999999, tlo: 0.23, allRisk: 1.04 },
+    { type: 'Bus', wilayah: '3', from: 0, to: 99999999999, tlo: 0.18, allRisk: 0.88 },
+
+    // Motor
+    { type: 'Motor', wilayah: '1', from: 0, to: 99999999999, tlo: 1.76, allRisk: 3.50 },
+    { type: 'Motor', wilayah: '2', from: 0, to: 99999999999, tlo: 1.80, allRisk: 3.50 },
+    { type: 'Motor', wilayah: '3', from: 0, to: 99999999999, tlo: 0.67, allRisk: 3.50 }
+  ];
+
+  // Tabel Syarat Klaim / Perluasan Jaminan Asuransi (dalam persen)
+  const INSURANCE_PERILS = [
+    {
+      id: 'banjir',
+      label: 'Banjir, Angin Topan & Badai',
+      codePrefix: 'Asrs. Banjir, topan',
+      rates: {
+        'All Risk': { '1': 0.075, '2': 0.100, '3': 0.075 },
+        'TLO': { '1': 0.050, '2': 0.075, '3': 0.050 }
+      }
+    },
+    {
+      id: 'gempa',
+      label: 'Gempa Bumi & Tsunami',
+      codePrefix: 'Asrs. Gempa, tsunami',
+      rates: {
+        'All Risk': { '1': 0.120, '2': 0.100, '3': 0.075 },
+        'TLO': { '1': 0.085, '2': 0.075, '3': 0.050 }
+      }
+    },
+    {
+      id: 'srcc',
+      label: 'Huru-Hara & Kerusuhan (SRCC)',
+      codePrefix: 'Asrs. SRCC',
+      rates: {
+        'All Risk': { '1': 0.050, '2': 0.050, '3': 0.050 },
+        'TLO': { '1': 0.035, '2': 0.035, '3': 0.035 }
+      }
+    },
+    {
+      id: 'terorisme',
+      label: 'Terorisme & Sabotase',
+      codePrefix: 'Asrs. Terorisme',
+      rates: {
+        'All Risk': { '1': 0.050, '2': 0.050, '3': 0.050 },
+        'TLO': { '1': 0.035, '2': 0.035, '3': 0.035 }
+      }
+    }
+  ];
+
+  // Tabel Depresiasi Nilai Pertanggungan Asuransi per Tahun / Tenor (bulan)
+  const DEPRECIATION_BY_YEAR = {
+    1: { tenorMonths: 12, ratePct: 100 },
+    2: { tenorMonths: 24, ratePct: 85 },
+    3: { tenorMonths: 36, ratePct: 70 },
+    4: { tenorMonths: 48, ratePct: 60 },
+    5: { tenorMonths: 60, ratePct: 50 }
+  };
+
+  // Konfigurasi 3 Skema Fitur Utama BRI KKB
+  const DEFAULT_SCHEMES = {
+    regular: {
+      id: 'regular',
+      name: 'BRI KKB Regular',
+      badge: 'Umum & Wiraswasta',
+      tagline: 'Skema standar pembiayaan kendaraan bermotor untuk nasabah umum, profesional, dan pelaku usaha.',
+      highlights: [
+        'Suku bunga kompetitif mulai 2,99% flat p.a.',
+        'Tenor fleksibel 12 s.d. 60 bulan (Refinancing maks. 48 bulan)',
+        'DP minimal mulai 15%–20% (insentif khusus kendaraan EV)',
+        'Provisi standar 1,00% & Admin Rp 2.000.000'
+      ],
+      defaultAdmin: 2000000,
+      defaultProvisiPct: 1.00,
+      defaultPolis: 50000,
+      defaultBlokirByFinancing: {
+        'New Car': 0,
+        'Used Car': 500000,
+        'Refinancing': 500000
+      },
+      dpSchemeModifier: 0, // persentase penyesuaian DP minimal
+      tenorsByFinancing: {
+        'New Car': [12, 24, 36, 48, 60],
+        'Used Car': [12, 24, 36, 48, 60],
+        'Refinancing': [12, 24, 36, 48]
+      },
+      // Suku bunga Flat p.a. (%) per Jenis Pembiayaan & Tenor
+      interestRates: {
+        'New Car': { 12: 2.99, 24: 3.45, 36: 3.75, 48: 4.15, 60: 4.55 },
+        'Used Car': { 12: 5.25, 24: 5.75, 36: 6.25, 48: 6.75, 60: 7.25 },
+        'Refinancing': { 12: 6.50, 24: 7.00, 36: 7.50, 48: 8.00, 60: 8.50 }
+      }
+    },
+
+    lnp: {
+      id: 'lnp',
+      name: 'BRI KKB LNP',
+      badge: 'Nasabah Prioritas',
+      tagline: 'Program eksklusif Layanan Nasabah Prioritas (BRI Prioritas & Private) dengan rate khusus & keringanan biaya.',
+      highlights: [
+        'Special rate Prioritas mulai 2,55% flat p.a.',
+        'Diskon 50% Biaya Provisi (0,50%) & Admin ringan Rp 1.250.000',
+        'Relaksasi DP minimal -5% untuk nasabah kelolaan Prioritas',
+        'Proses persetujuan jalur cepat (Fast Track RM Prioritas)'
+      ],
+      defaultAdmin: 1250000,
+      defaultProvisiPct: 0.50,
+      defaultPolis: 50000,
+      defaultBlokirByFinancing: {
+        'New Car': 0,
+        'Used Car': 500000,
+        'Refinancing': 500000
+      },
+      dpSchemeModifier: -5,
+      tenorsByFinancing: {
+        'New Car': [12, 24, 36, 48, 60],
+        'Used Car': [12, 24, 36, 48, 60],
+        'Refinancing': [12, 24, 36, 48]
+      },
+      interestRates: {
+        'New Car': { 12: 2.55, 24: 2.88, 36: 3.18, 48: 3.58, 60: 3.98 },
+        'Used Car': { 12: 4.50, 24: 4.95, 36: 5.45, 48: 5.95, 60: 6.45 },
+        'Refinancing': { 12: 5.75, 24: 6.25, 36: 6.75, 48: 7.25, 60: 7.75 }
+      }
+    },
+
+    karyawan: {
+      id: 'karyawan',
+      name: 'BRI KKB Karyawan',
+      badge: 'Payroll & Pekerja BRI Group',
+      tagline: 'Fasilitas khusus pekerja tetap / Payroll BRI, BUMN, ASN, dan instansi mitra PKS dengan bunga paling ringan.',
+      highlights: [
+        'Suku bunga spesial karyawan mulai 2,35% flat p.a.',
+        'Keringanan Biaya Admin Rp 1.000.000 & Provisi ringan 0,25%',
+        'Relaksasi DP minimal -5% (mulai 10% untuk EV / New Car)',
+        'Potong gaji otomatis (Auto-Debet Payroll) s.d. 60 bulan'
+      ],
+      defaultAdmin: 1000000,
+      defaultProvisiPct: 0.25,
+      defaultPolis: 50000,
+      defaultBlokirByFinancing: {
+        'New Car': 0,
+        'Used Car': 350000,
+        'Refinancing': 350000
+      },
+      dpSchemeModifier: -5,
+      tenorsByFinancing: {
+        'New Car': [12, 24, 36, 48, 60],
+        'Used Car': [12, 24, 36, 48, 60],
+        'Refinancing': [12, 24, 36, 48, 60]
+      },
+      interestRates: {
+        'New Car': { 12: 2.35, 24: 2.65, 36: 2.95, 48: 3.35, 60: 3.75 },
+        'Used Car': { 12: 4.25, 24: 4.75, 36: 5.25, 48: 5.75, 60: 6.25 },
+        'Refinancing': { 12: 5.50, 24: 6.00, 36: 6.50, 48: 7.00, 60: 7.50 }
+      }
+    }
+  };
+
+  // Aturan Dasar Minimal DP (%) sebelum modifier Merk, Bahan Bakar, dan Skema
+  const BASE_MIN_DP_BY_FINANCING = {
+    'New Car': {
+      'Non Bus dan Non Truk': 20,
+      'Truk dan Pick up': 25,
+      'Bus': 25,
+      'Motor': 15
+    },
+    'Used Car': {
+      'Non Bus dan Non Truk': 25,
+      'Truk dan Pick up': 30,
+      'Bus': 30,
+      'Motor': 20
+    },
+    'Refinancing': {
+      'Non Bus dan Non Truk': 15,
+      'Truk dan Pick up': 20,
+      'Bus': 20,
+      'Motor': 20
+    }
+  };
+
+  global.KKBConfig = {
+    WILAYAH_OPTIONS,
+    FINANCING_TYPES,
+    VEHICLE_TYPES,
+    VEHICLE_BRANDS,
+    FUEL_TYPES,
+    COVERAGE_OPTIONS,
+    FIDUSIA_TABLE,
+    INSURANCE_BASE_RATES,
+    INSURANCE_PERILS,
+    DEPRECIATION_BY_YEAR,
+    DEFAULT_SCHEMES,
+    BASE_MIN_DP_BY_FINANCING
+  };
+})(window);
