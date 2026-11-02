@@ -34,12 +34,12 @@ Aplikasi web interaktif untuk simulasi perhitungan **Kredit Kendaraan Bermotor (
 - **Rumus Fidusia:** Otomatis mengacu pada tabel rentang Nilai Penjaminan (`s.d. 50 Jt` hingga `> 1 Miliar`).
 - **Rumus Asuransi & Depresiasi:** Dihitung per tahun mengikuti persentase depresiasi (`Tahun 1: 100%`, `Tahun 2: 85%`, `Tahun 3: 70%`, `Tahun 4: 60%`, `Tahun 5: 50%`) dikalikan tarif dasar OJK sesuai Wilayah & Tipe serta tarif perluasan klaim (`All Risk` / `TLO`).
 
-### 4. Output & Ekspor
-1. **Tabel Perbandingan Tenor (`12`, `24`, `36`, `48`, `60` Bulan):** Menampilkan Suku Bunga, Premi Asuransi, Biaya Kredit, **Angsuran / Bulan**, dan **Total DP (TDP)**.
-2. **Komparasi Lintas 3 Skema:** Membandingkan `BRI KKB Regular`, `BRI KKB LNP`, dan `BRI KKB Karyawan` secara berdampingan.
-3. **Grafik Visualisasi & Rincian Premi Tahunan:** Donut Chart komposisi TDP dan kurva progres pelunasan pokok pinjaman.
-4. **Jadwal Amortisasi & Anotasi Lengkap Per Bulan (Gaya KPR):** Mendukung tampilan **Anuitas / Efektif** maupun **Proporsional Flat**, lengkap dengan anotasi status proteksi asuransi setiap pergantian tahun.
-5. **Ekspor CSV & Cetak PDF:** Unduh simulasi ke format `.csv` (Excel) atau cetak langsung sebagai dokumen PDF.
+### 4. Output Tabel Responsif
+1. **Tabel Simulasi Tenor (`12`, `24`, `36`, `48`, `60` Bulan):** Menampilkan Suku Bunga Flat, Total Premi Asuransi, Biaya Kredit, **Angsuran / Bulan**, dan **Total DP (TDP)**.
+2. **Tabel Rincian TDP & Biaya Kredit:** Membedah komponen DP Murni, Premi Asuransi, Admin, Provisi, Polis, Fidusia, dan Blokir BPKB secara transparan.
+3. **Tabel Asuransi & Depresiasi per Tahun:** Menampilkan persentase depresiasi (`100%`, `85%`, `70%`, `60%`, `50%`), nilai pertanggungan, jenis *coverage* per tahun, total *rate*, dan premi tahunan.
+4. **Jadwal Amortisasi & Anotasi Lengkap Per Bulan (Gaya KPR):** Mendukung tampilan **Anuitas (Gaya KPR)** maupun **Proporsional Flat**, lengkap dengan anotasi status proteksi asuransi setiap pergantian tahun dan adaptif di berbagai ukuran resolusi layar.
+5. **Modal Tabel Referensi & Kustomisasi Rate:** Menampilkan seluruh tabel ketentuan (Suku Bunga, Biaya Default, Rate Asuransi Wilayah 1–3, Perluasan Klaim, Depresiasi, dan Fidusia) secara terbuka dan dapat disesuaikan langsung.
 
 ---
 
@@ -53,12 +53,13 @@ Aplikasi ini dibuat tanpa ketergantungan *build tool* eksternal sehingga dapat d
 
 ```text
 kalkulator-KKB-debitur/
+├── BRI_2025.png        # Logo resmi BRI
 ├── index.html          # Antarmuka utama aplikasi kalkulator KKB BRI
 ├── css/
-│   └── styles.css      # Desain sistem perbankan BRI, responsif & print-ready
+│   └── styles.css      # Desain UI tabel responsif menyesuaikan resolusi layar
 ├── js/
 │   ├── config.js       # Tabel referensi Fidusia, Rate Asuransi, Klaim, Depresiasi & Skema
 │   ├── calculator.js   # Mesin kalkulasi finansial, asuransi multi-tahun & amortisasi
-│   └── app.js          # Controller interaktif UI, grafik SVG, modal rate & ekspor CSV
+│   └── app.js          # Controller interaktif UI, tabel output & modal pengaturan rate
 └── README.md           # Dokumentasi proyek
 ```

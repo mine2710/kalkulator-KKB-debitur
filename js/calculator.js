@@ -556,7 +556,6 @@
 
   /**
    * Menghitung semua pilihan Tenor standar (12, 24, 36, 48, 60 bulan) sekaligus
-   * serta perbandingan lintas 3 skema (Regular, LNP, Karyawan)
    */
   function calculateFullSuite(baseParams) {
     const standardTenors = [12, 24, 36, 48, 60];
@@ -570,31 +569,10 @@
     const activeResult =
       tenorResults.find((r) => r.tenorMonths === selectedTenor) || tenorResults[2];
 
-    // Bandingkan 3 skema pada tenor terpilih (menggunakan default admin/provisi/blokir masing-masing skema
-    // kecuali skema yang sedang aktif memakai input form saat ini)
-    const schemeComparison = ['regular', 'lnp', 'karyawan'].map((sId) => {
-      const sch = (baseParams.schemes || Config.DEFAULT_SCHEMES)[sId];
-      const isCurrent = sId === baseParams.schemeId;
-      const blokirDefault =
-        (sch.defaultBlokirByFinancing && sch.defaultBlokirByFinancing[baseParams.financingType]) || 0;
-
-      return calculateForTenor(
-        Object.assign({}, baseParams, {
-          schemeId: sId,
-          tenorMonths: activeResult.tenorMonths,
-          adminFee: isCurrent ? baseParams.adminFee : sch.defaultAdmin,
-          provisiPct: isCurrent ? baseParams.provisiPct : sch.defaultProvisiPct,
-          polisFee: isCurrent ? baseParams.polisFee : sch.defaultPolis,
-          blokirFee: isCurrent ? baseParams.blokirFee : blokirDefault
-        })
-      );
-    });
-
     return {
       minDpInfo,
       tenorResults,
-      activeResult,
-      schemeComparison
+      activeResult
     };
   }
 
