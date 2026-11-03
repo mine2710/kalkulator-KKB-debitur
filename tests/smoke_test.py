@@ -81,13 +81,47 @@ with sync_playwright() as p:
       assert(sim.creditFees.provisiAmount === 2400000, 'provisi must be % * Pokok Hutang');
       assert(sim.flatRatePa === 5.60, 'Mobil Niaga 36m regular flat rate');
       assert(sim.effectiveRatePa === 10.38, 'Mobil Niaga 36m regular effective rate');
-      // ADDB: bulan ke-1 seluruhnya porsi pokok tanpa bunga, bulan ke-2 dst ada bunga, lunas di akhir
-      const sched = calc.generateAmortizationSchedule(sim);
-      assert(sched[0].interestPart === 0 && sched[0].principalPart === sim.monthlyInstallment, 'month 1 principal only');
-      assert(sched[1].interestPart > 0, 'month 2 has interest');
-      assert(sched[sched.length - 1].endingBalance === 0, 'loan fully paid');
-      assert(sched.reduce((a, r) => a + r.principalPart, 0) === sim.principalLoan, 'principal sum');
-      assert(sched.every(r => r.installment === sim.monthlyInstallment), 'constant installment');
+      // ADDB (default): bulan ke-1 SUDAH ada porsi bunga (bukan 0)
+      const schedAddb = calc.generateAmortizationSchedule(sim);
+      assert(schedAddb[0].interestPart > 0, 'ADDB month 1 must have interest');
+      assert(schedAddb[1].interestPart > 0 && schedAddb[1].interestPart < schedAddb[0].interestPart, 'ADDB effective interest decreases');
+      assert(schedAddb[schedAddb.length - 1].endingBalance === 0, 'ADDB loan fully paid');
+      assert(schedAddb.reduce((a, r) => a + r.principalPart, 0) === sim.principalLoan, 'ADDB principal sum');
+      assert(schedAddb.every(r => r.installment === sim.monthlyInstallment), 'ADDB constant installment');
+
+      // ADDM: khusus ADDM bulan ke-1 seluruhnya porsi pokok tanpa bunga, bulan ke-2 dst ada bunga
+      const simAddm = calc.calculateForTenor({
+        schemeId: 'regular', financingType: 'Mobil Niaga', wilayah: '2',
+        vehiclePrice: 300000000, dpAmount: 60000000, provisiPct: 1.0,
+        polisFee: 60000, blokirFee: 500000, tenorMonths: 36,
+        rateType: 'efektif', installmentType: 'ADDM'
+      });
+      const schedAddm = calc.generateAmortizationSchedule(simAddm);
+      assert(schedAddm[0].interestPart === 0 && schedAddm[0].principalPart === simAddm.monthlyInstallment, 'ADDM month 1 principal only');
+      assert(schedAddm[1].interestPart > 0, 'ADDM month 2 has interest');
+      assert(schedAddm[schedAddm.length - 1].endingBalance === 0, 'ADDM loan fully paid');
+      assert(schedAddm.reduce((a, r) => a + r.principalPart, 0) === simAddm.principalLoan, 'ADDM principal sum');
+      assert(schedAddm.every(r => r.installment === simAddm.monthlyInstallment), 'ADDM constant installment');
+
+      // Mode Bunga Flat (ADDB vs ADDM)
+      const simFlatAddb = calc.calculateForTenor({
+        schemeId: 'regular', financingType: 'Mobil Niaga', wilayah: '2',
+        vehiclePrice: 300000000, dpAmount: 60000000, tenorMonths: 36,
+        rateType: 'flat', installmentType: 'ADDB'
+      });
+      const schedFlatAddb = calc.generateAmortizationSchedule(simFlatAddb);
+      assert(schedFlatAddb[0].interestPart > 0 && schedFlatAddb[0].interestPart === schedFlatAddb[1].interestPart, 'Flat ADDB month 1 has constant interest');
+      assert(schedFlatAddb[schedFlatAddb.length - 1].endingBalance === 0, 'Flat ADDB fully paid');
+
+      const simFlatAddm = calc.calculateForTenor({
+        schemeId: 'regular', financingType: 'Mobil Niaga', wilayah: '2',
+        vehiclePrice: 300000000, dpAmount: 60000000, tenorMonths: 36,
+        rateType: 'flat', installmentType: 'ADDM'
+      });
+      const schedFlatAddm = calc.generateAmortizationSchedule(simFlatAddm);
+      assert(schedFlatAddm[0].interestPart === 0 && schedFlatAddm[0].principalPart === simFlatAddm.monthlyInstallment, 'Flat ADDM month 1 no interest');
+      assert(schedFlatAddm[1].interestPart > 0 && schedFlatAddm[1].interestPart === schedFlatAddm[2].interestPart, 'Flat ADDM month 2+ constant interest');
+      assert(schedFlatAddm[schedFlatAddm.length - 1].endingBalance === 0, 'Flat ADDM fully paid');
       const usedSuite = calc.calculateFullSuite({brandValue: 'TOYOTA', modelValue: 'AVANZA', vehiclePrice: 300000000,
         dpAmount: 60000000, financingType: 'Used Car', schemeId: 'karyawan', selectedTenor: 60});
       assert(usedSuite.tenorResults.map(r => r.tenorMonths).join() === '12,24,36,48', 'used car tenors');
@@ -153,7 +187,20 @@ with sync_playwright() as p:
     page.click('[data-scheme="karyawan"]')
     assert "8,41%" in page.locator("#kpiRateInfo").inner_text()
     assert "Pokok Hutang" in page.locator("#provisiRpCaption").text_content()
+    # Uji interaksi dropdown Jenis Suku Bunga (Efektif vs Flat) & Skema Angsuran (ADDB vs ADDM)
+    assert page.locator("#inputRateType").input_value() == "efektif"
+    assert page.locator("#amortizationBody tr").first.locator("td").nth(3).inner_text() != "Rp 0"
+    page.select_option("#inputInstallmentType", "ADDM")
+    assert page.locator("#amortizationBody tr").first.locator("td").nth(3).inner_text() == "Rp 0"
+    assert page.locator("#amortizationBody tr").nth(1).locator("td").nth(3).inner_text() != "Rp 0"
+    page.select_option("#inputRateType", "flat")
+    assert "Bunga Flat" in page.locator("#kpiRateInfo").inner_text()
+    assert page.locator("#amortizationBody tr").first.locator("td").nth(3).inner_text() == "Rp 0"
+    page.select_option("#inputInstallmentType", "ADDB")
+    assert page.locator("#amortizationBody tr").first.locator("td").nth(3).inner_text() != "Rp 0"
     page.click("#btnResetForm")
+    assert page.locator("#inputRateType").input_value() == "efektif"
+    assert page.locator("#inputInstallmentType").input_value() == "ADDB"
     assert page.locator("#inputBrand").input_value() == "TOYOTA"
     assert page.locator("#inputModel").input_value() == "AVANZA"
     assert page.locator("#inputDpValue").input_value() == "15"

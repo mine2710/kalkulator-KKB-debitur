@@ -34,6 +34,7 @@
     provisiPct: 1.0,
     polisFee: 60000,
     blokirFee: 500000,
+    rateType: 'efektif',
     installmentType: 'ADDB',
     selectedTenor: 36,
     activeModalTab: 'tabRates',
@@ -249,15 +250,17 @@
     });
 
     const metaIds = { regular: 'metaRegular', lnp: 'metaLnp', karyawan: 'metaKaryawan' };
+    const isFlat = state.rateType === 'flat';
     SCHEME_IDS.forEach((sId) => {
       const sch = state.schemes[sId];
-      const rates = sch.interestRates[state.financingType] || {};
+      const rateBucket = isFlat ? sch.interestRates : sch.effectiveRates;
+      const rates = (rateBucket && rateBucket[state.financingType]) || {};
       const minRate = Math.min.apply(null, Object.values(rates));
       $(metaIds[sId]).textContent = `${sch.badge} • bunga mulai ${formatPct(minRate)}`;
     });
 
     const active = state.schemes[state.schemeId];
-    $('activeSchemeSubtitle').textContent = `${active.name} • ${state.financingType}`;
+    $('activeSchemeSubtitle').textContent = `${active.name} • ${state.financingType} • ${isFlat ? 'Bunga Flat' : 'Bunga Efektif'}`;
     $('tableSchemeBadge').textContent = active.name;
   }
 
@@ -306,6 +309,7 @@
       provisiPct: state.provisiPct,
       polisFee: state.polisFee,
       blokirFee: state.blokirFee,
+      rateType: state.rateType,
       installmentType: state.installmentType,
       selectedTenor: state.selectedTenor,
       provisiBasis: state.provisiBasis,
@@ -343,7 +347,9 @@
     $('kpiTenorLabel').textContent = `Angsuran / Bulan • Tenor ${active.tenorMonths} Bln`;
     $('kpiMonthlyInstallment').textContent = formatRupiah(active.monthlyInstallment);
     $('kpiRateInfo').textContent =
-      `Bunga Flat ${formatPct(active.flatRatePa)} p.a. • Efektif ${formatPct(active.effectiveRatePa)} p.a.`;
+      active.rateType === 'flat'
+        ? `Bunga Flat ${formatPct(active.flatRatePa)} p.a. (Efektif ${formatPct(active.effectiveRatePa)} p.a.) • ${active.installmentType}`
+        : `Bunga Efektif ${formatPct(active.effectiveRatePa)} p.a. (Flat ${formatPct(active.flatRatePa)} p.a.) • ${active.installmentType}`;
     $('kpiTotalDp').textContent = formatRupiah(active.totalDp);
     $('kpiTdpSub').textContent =
       active.installmentType === 'ADDM'
@@ -386,8 +392,8 @@
               ${isSel ? '<span class="tag tag-orange">Dipilih</span>' : ''}
               ${!row.isAvailable ? '<span class="tag tag-gray">Tidak tersedia</span>' : ''}
             </td>
-            <td class="num" data-label="Bunga Flat">${formatPct(row.flatRatePa)}</td>
-            <td class="num" data-label="Bunga Efektif">${formatPct(row.effectiveRatePa)}</td>
+            <td class="num ${row.rateType === 'flat' ? 'strong text-blue' : 'muted'}" data-label="Bunga Flat">${formatPct(row.flatRatePa)}</td>
+            <td class="num ${row.rateType !== 'flat' ? 'strong text-blue' : 'muted'}" data-label="Bunga Efektif">${formatPct(row.effectiveRatePa)}</td>
             <td class="num strong text-blue" data-label="Angsuran / Bulan">${formatRupiah(row.monthlyInstallment)}</td>
             <td class="num strong text-dark" data-label="Total DP (TDP)">${formatRupiah(row.totalDp)}</td>
           </tr>
@@ -526,8 +532,17 @@
   }
 
   function renderAmortizationTable(rows, active) {
-    $('amortSubtitleInfo').textContent =
-      `Bunga Efektif ${formatPct(active.effectiveRatePa)} p.a. • Bulan ke-1 seluruhnya Porsi Pokok, bunga dihitung mulai bulan ke-2`;
+    const isFlat = active.rateType === 'flat';
+    const isADDM = active.installmentType === 'ADDM';
+    const rateLabel = isFlat
+      ? `Bunga Flat ${formatPct(active.flatRatePa)} p.a.`
+      : `Bunga Efektif ${formatPct(active.effectiveRatePa)} p.a.`;
+    const ruleLabel = isADDM
+      ? 'ADDM: Bulan ke-1 tanpa bunga (100% Porsi Pokok), bunga dihitung mulai bulan ke-2'
+      : isFlat
+        ? 'ADDB: Porsi pokok & bunga dihitung tetap sejak bulan ke-1'
+        : 'ADDB: Bunga dihitung sejak bulan ke-1 dari sisa pokok pinjaman';
+    $('amortSubtitleInfo').textContent = `${rateLabel} • ${ruleLabel}`;
 
     let tPrin = 0;
     let tInt = 0;
@@ -1134,6 +1149,12 @@
       recalculateAndRender();
     });
 
+    $('inputRateType').addEventListener('change', (e) => {
+      state.rateType = e.target.value;
+      updateSchemeUi();
+      recalculateAndRender();
+    });
+
     $('inputInstallmentType').addEventListener('change', (e) => {
       state.installmentType = e.target.value;
       recalculateAndRender();
@@ -1162,11 +1183,13 @@
         dpMode: 'pct',
         coverageValue: 'Kombinasi#1',
         selectedPerils: ['banjir'],
+        rateType: 'efektif',
         installmentType: 'ADDB',
         selectedTenor: 36
       });
       $('inputWilayah').value = state.wilayah;
       $('inputFinancingType').value = state.financingType;
+      $('inputRateType').value = state.rateType;
       populateStaticDropdowns();
       applyMinimumDp();
       $('inputVehiclePrice').value = formatNumberId(state.vehiclePrice);

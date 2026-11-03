@@ -6,7 +6,7 @@
  * 3. Biaya Provisi (Rp) = Biaya Provisi (%) * Pokok Hutang (atau Harga Kendaraan)
  * 4. Biaya Fidusia = Lookup tabel Nilai Penjaminan
  * 5. Premi Asuransi = Multi-tahun dengan Rate Dasar + Perluasan Klaim * Nilai Pertanggungan Terdepresiasi
- * 6. Jadwal Angsuran Bulanan setara KPR (bunga efektif rates.csv, bulan ke-1 tanpa porsi bunga)
+ * 6. Jadwal Angsuran Bulanan (pilihan Bunga Efektif / Flat; khusus ADDM bulan ke-1 tanpa porsi bunga)
  */
 (function (global) {
   'use strict';
@@ -272,6 +272,7 @@
       polisFee = 0,
       blokirFee = 0,
       tenorMonths = 36,
+      rateType = 'efektif', // 'efektif' (Anuitas) atau 'flat'
       installmentType = 'ADDB', // 'ADDB' (default: TDP = DP + Asuransi + Biaya Kredit) atau 'ADDM'
       provisiBasis = 'principal',
       fidusiaBasis = 'price',
@@ -290,19 +291,50 @@
     const dpPct = safePrice > 0 ? (safeDp / safePrice) * 100 : 0;
     const principalLoan = Math.max(0, safePrice - safeDp); // Pokok Hutang Murni
 
-    // Suku bunga flat p.a. (untuk angsuran) dan efektif p.a. (untuk jadwal angsuran) dari rates.csv
+    // Suku bunga flat p.a. dan efektif p.a. dari rates.csv
     const flatRates = (scheme.interestRates && scheme.interestRates[financingType]) || {};
     const effRates = (scheme.effectiveRates && scheme.effectiveRates[financingType]) || {};
     const flatRatePa = Number(flatRates[tenorMonths]) || 0;
+    const isADDM = installmentType === 'ADDM';
+    const activeRateType = rateType === 'flat' ? 'flat' : 'efektif';
 
-    // Bunga & Angsuran per Bulan
+    // Hitung bunga efektif terlebih dahulu (dari rates.csv, atau ekuivalen flat bila tidak tersedia)
     const tenorYears = tenorMonths / 12;
-    const totalInterest = Math.round(principalLoan * (flatRatePa / 100) * tenorYears);
-    const totalLoanWithInterest = principalLoan + totalInterest;
+    const rawFlatInterest = Math.round(principalLoan * (flatRatePa / 100) * tenorYears);
+    const flatMonthlyInstallment =
+      tenorMonths > 0 ? Math.round((principalLoan + rawFlatInterest) / tenorMonths) : 0;
+    const effectiveRatePa =
+      effRates[tenorMonths] !== undefined
+        ? Number(effRates[tenorMonths])
+        : solveEffectiveAnnualRate(tenorMonths, flatMonthlyInstallment, principalLoan, isADDM);
+
+    // Angsuran per Bulan sesuai pilihan Jenis Suku Bunga (Efektif vs Flat) & Skema (ADDB vs ADDM)
+    let monthlyInstallment = 0;
+    if (principalLoan > 0 && tenorMonths > 0) {
+      if (activeRateType === 'flat') {
+        monthlyInstallment = flatMonthlyInstallment;
+      } else {
+        const r = effectiveRatePa / 100 / 12;
+        if (r <= 0) {
+          monthlyInstallment = Math.round(principalLoan / tenorMonths);
+        } else if (isADDM) {
+          // Annuity Due (ADDM): angsuran ke-1 saat akad tanpa bunga
+          monthlyInstallment = Math.round(
+            (principalLoan * r) / ((1 - Math.pow(1 + r, -tenorMonths)) * (1 + r))
+          );
+        } else {
+          // Ordinary Annuity (ADDB): angsuran ke-1 dibayar 1 bulan pasca akad (ada bunga bln ke-1)
+          monthlyInstallment = Math.round(
+            (principalLoan * r) / (1 - Math.pow(1 + r, -tenorMonths))
+          );
+        }
+      }
+    }
+
+    const totalLoanWithInterest = monthlyInstallment * tenorMonths;
+    const totalInterest = Math.max(0, totalLoanWithInterest - principalLoan);
     const monthlyPrincipalFlat = tenorMonths > 0 ? principalLoan / tenorMonths : 0;
     const monthlyInterestFlat = tenorMonths > 0 ? totalInterest / tenorMonths : 0;
-    const monthlyInstallment =
-      tenorMonths > 0 ? Math.round(totalLoanWithInterest / tenorMonths) : 0;
 
     // Asuransi sesuai tenor
     const insurance = calculateInsuranceForTenor({
@@ -327,7 +359,6 @@
       fidusiaBasis
     });
 
-    const isADDM = installmentType === 'ADDM';
     const firstInstallmentInTdp = isADDM ? monthlyInstallment : 0;
 
     // Rumus Utama TDP = DP + Asuransi + Biaya Kredit (+ Angsuran ke-1 bila ADDM)
@@ -336,12 +367,6 @@
       insurance.totalPremium +
       creditFees.totalCreditFees +
       firstInstallmentInTdp;
-
-    // Bunga efektif mengikuti tabel rates.csv; fallback ke konversi ekuivalen bila tidak diisi
-    const effectiveRatePa =
-      effRates[tenorMonths] !== undefined
-        ? Number(effRates[tenorMonths])
-        : solveEffectiveAnnualRate(tenorMonths, monthlyInstallment, principalLoan, false);
 
     const remainingInstallmentsTotal = isADDM
       ? monthlyInstallment * Math.max(0, tenorMonths - 1)
@@ -362,6 +387,7 @@
       dpAmount: Math.round(safeDp),
       dpPct,
       principalLoan,
+      rateType: activeRateType,
       flatRatePa,
       effectiveRatePa,
       totalInterest,
@@ -379,15 +405,18 @@
   }
 
   /**
-   * Menghasilkan Jadwal Angsuran Bulanan (gaya KPR BRI) dengan bunga efektif rates.csv:
-   * - Bulan ke-1 : seluruh angsuran menjadi Porsi Pokok (Porsi Bunga = 0)
-   * - Bulan ke-2 dst : Porsi Bunga = Sisa Pokok × bunga efektif / 12, Porsi Pokok = Angsuran − Porsi Bunga
-   * - Bulan terakhir : Porsi Pokok = sisa pokok sehingga pinjaman lunas, angsuran tetap sama
+   * Menghasilkan Jadwal Angsuran Bulanan sesuai pilihan Jenis Bunga (Efektif / Flat) & Skema (ADDB / ADDM):
+   * - Khusus ADDM di bulan ke-1 : seluruh angsuran menjadi Porsi Pokok (Porsi Bunga = 0)
+   * - ADDB sejak bulan ke-1 (serta ADDM mulai bulan ke-2) : dikenakan Porsi Bunga sesuai metode (Efektif / Flat)
+   * - Bulan terakhir : Porsi Pokok = sisa pokok sehingga pinjaman lunas hingga Rp 0
    */
-  function generateAmortizationSchedule(tenorResult) {
+  function generateAmortizationSchedule(tenorResult, modeOverride) {
     const n = tenorResult.tenorMonths;
     const principal = tenorResult.principalLoan;
     const pmt = tenorResult.monthlyInstallment;
+    const isADDM = tenorResult.installmentType === 'ADDM';
+    const rateMode = modeOverride || tenorResult.rateType || 'efektif';
+    const useEffective = rateMode !== 'flat';
     const rMonthly = tenorResult.effectiveRatePa / 100 / 12;
     const yearlyIns = tenorResult.insurance.yearlyBreakdown;
 
@@ -407,18 +436,24 @@
 
       if (principal <= 0) {
         installmentThisMonth = 0;
-      } else if (m === 1) {
-        // Bulan pertama langsung masuk Porsi Pokok tanpa Porsi Bunga
+      } else if (isADDM && m === 1) {
+        // Khusus ADDM: angsuran bulan ke-1 dibayar saat akad, langsung mengurangi pokok tanpa bunga
         principalPart = Math.min(pmt, remainingPrincipal);
-        interestPart = installmentThisMonth - principalPart;
+        interestPart = Math.max(0, installmentThisMonth - principalPart);
       } else if (m === n) {
         principalPart = remainingPrincipal;
         interestPart = Math.max(0, installmentThisMonth - principalPart);
         installmentThisMonth = principalPart + interestPart;
-      } else {
+      } else if (useEffective && rMonthly > 0) {
         interestPart = Math.round(remainingPrincipal * rMonthly);
         principalPart = Math.min(remainingPrincipal, Math.max(0, installmentThisMonth - interestPart));
         interestPart = installmentThisMonth - principalPart;
+      } else {
+        const flatPrincipal = isADDM
+          ? Math.round((principal - pmt) / Math.max(1, n - 1))
+          : Math.round(principal / n);
+        principalPart = Math.min(remainingPrincipal, Math.max(0, flatPrincipal));
+        interestPart = Math.max(0, installmentThisMonth - principalPart);
       }
 
       const beginningBalance = remainingPrincipal;

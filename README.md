@@ -13,9 +13,10 @@ Aplikasi web interaktif untuk simulasi perhitungan **Kredit Kendaraan Bermotor (
 
 ### 2. Input Utama & Minimum DP
 1. **Skema Pembiayaan:** `Regular`, `LNP`, atau `Karyawan`.
-2. **Jenis Pembiayaan:** `New Car`, `Used Car`, `Refinancing`, atau `Mobil Niaga`.
-   - `New Car`, `Used Car`, dan `Refinancing` otomatis dipetakan ke golongan asuransi **Non Bus dan Non Truk**.
-   - `Mobil Niaga` otomatis dipetakan ke golongan asuransi **Truk dan Pick Up** dengan tabel bunga komersial tersendiri (Tenor 12–60 bulan untuk Karyawan BRI Group, LNP, dan Regular).
+2. **Jenis Pembiayaan & Jenis Suku Bunga:**
+   - Pilihan Pembiayaan: `New Car`, `Used Car` (maks. 48 bulan), `Refinancing` (maks. 48 bulan), atau `Mobil Niaga` (s.d. 60 bulan).
+   - Pilihan Jenis Suku Bunga: dropdown **`Bunga Efektif`** atau **`Bunga Flat`** (seluruh tarif default dimuat dari `rates.csv`).
+   - `New Car`, `Used Car`, dan `Refinancing` otomatis dipetakan ke golongan asuransi **Non Bus dan Non Truk**, sedangkan `Mobil Niaga` ke **Truk dan Pick up**.
 3. **Merk dan Tipe / Model:** dropdown tipe mengikuti merk yang dipilih.
 4. **Minimum DP:** lookup langsung dari pasangan merk + tipe/model pada katalog kendaraan.
    - Tidak dipengaruhi jenis pembiayaan, skema, bahan bakar, kategori, atau depreciation.
@@ -25,7 +26,9 @@ Aplikasi web interaktif untuk simulasi perhitungan **Kredit Kendaraan Bermotor (
 6. **Pengaturan lanjutan:** wilayah asuransi, coverage, syarat klaim / perluasan, biaya kredit (default Biaya Polis Rp 60.000 & Blokir BPKB Rp 500.000), dan skema angsuran.
 
 ### 3. Rumus Perhitungan
-- **Rumus TDP:** `DP Murni + Total Premi Asuransi + Total Biaya Kredit` *(+ Angsuran ke-1 apabila memilih mode ADDM)*
+- **Rumus Angsuran & Skema ADDB vs ADDM:**
+  - **ADDB (Angsuran Dibayar Di Belakang):** Angsuran pertama dibayar 1 bulan pasca akad sehingga bulan ke-1 sudah memiliki **Porsi Bunga** (baik mode Bunga Efektif maupun Bunga Flat).
+  - **ADDM (Angsuran Dibayar Di Muka):** Angsuran pertama masuk TDP saat akad sehingga khusus bulan ke-1 **tidak dikenakan bunga** (`Porsi Bunga = Rp 0`, 100% mengurangi Pokok Hutang), dan bunga baru dihitung mulai bulan ke-2.
 - **Rumus Biaya Kredit:** `Biaya Admin + Biaya Provisi (Rp) + Biaya Polis + Biaya Fidusia + Blokir BPKB`
 - **Rumus Biaya Provisi (Rp):** `Biaya Provisi (%) × Pokok Hutang` *(dapat diubah ke basis Harga Kendaraan melalui menu Pengaturan Rate)*
 - **Rumus Fidusia:** Otomatis mengacu pada tabel rentang Nilai Penjaminan (`s.d. 50 Jt` hingga `> 1 Miliar`).
@@ -70,6 +73,7 @@ Uji browser tersedia di `tests/smoke_test.py` dan dijalankan dengan Python, pake
 kalkulator-KKB-debitur/
 ├── BRI_2025.png        # Logo resmi BRI
 ├── vehicles.csv        # Data dropdown merk-model dan minimum DP yang dapat diedit
+├── rates.csv           # Data default suku bunga Flat & Efektif per pembiayaan dan skema
 ├── index.html          # Antarmuka utama aplikasi kalkulator KKB BRI
 ├── css/
 │   └── styles.css      # Desain UI tabel responsif menyesuaikan resolusi layar
