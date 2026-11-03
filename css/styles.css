@@ -164,6 +164,28 @@ body {
   border-color: var(--bri-blue);
 }
 
+.btn-disguised {
+  background: transparent;
+  border: 0;
+  padding: 6px;
+  border-radius: 8px;
+  color: #94a3b8;
+  opacity: 0.3;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.btn-disguised:hover {
+  opacity: 0.8;
+  color: #475569;
+  background: rgba(148, 163, 184, 0.12);
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--text-secondary);
@@ -640,7 +662,11 @@ body {
 }
 
 .kpi.accent {
-  border-top: 3px solid var(--bri-orange);
+  border-top: 3px solid #334155;
+}
+
+.kpi.accent .kpi-value {
+  color: #0f172a;
 }
 
 .kpi.teal {
@@ -710,6 +736,8 @@ body {
 .table .num {
   text-align: right;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
 }
 
 .table .col-ket {
@@ -717,11 +745,16 @@ body {
 }
 
 .table .strong {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .table .text-blue {
   color: var(--bri-blue-dark);
+}
+
+.table .text-dark {
+  color: #0f172a !important;
+  font-weight: 600;
 }
 
 .table .text-orange {

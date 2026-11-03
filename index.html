@@ -8,8 +8,9 @@
   <link rel="icon" type="image/png" href="LOGO_BRI_KKB.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/simple.css" />
 </head>
 <body>
   <!-- ======================== NAVBAR ======================== -->
@@ -19,13 +20,12 @@
         <img src="LOGO_BRI_KKB.png" alt="Logo BRI KKB" class="brand-logo" />
         <span class="brand-divider" aria-hidden="true"></span>
         <div class="brand-text">
-          <h1 class="brand-title">Kalkulator Simulasi KKB Debitur</h1>
-          <p class="brand-subtitle">Simulasi Kredit Kendaraan Bermotor BRI • Regular, LNP &amp; Karyawan</p>
+          <h1 class="brand-title">Kalkulator KKB</h1>
+          <p class="brand-subtitle">Simulasi Kredit Kendaraan Bermotor</p>
         </div>
       </div>
-      <button type="button" class="btn btn-outline" id="btnOpenRefModal" title="Tabel Ketentuan Referensi &amp; Kustomisasi Rate">
+      <button type="button" class="btn-disguised" id="btnOpenRefModal" aria-label="Tabel Ketentuan Referensi &amp; Kustomisasi Rate" title="Ketentuan Referensi &amp; Rate">
         <span aria-hidden="true">⚙</span>
-        <span class="btn-label">Tabel Referensi &amp; Rate</span>
       </button>
     </div>
   </header>
@@ -36,7 +36,7 @@
       <button type="button" class="scheme-btn active" data-scheme="regular">
         <span class="scheme-num">1</span>
         <span class="scheme-info">
-          <span class="scheme-name">BRI KKB Regular</span>
+          <span class="scheme-name">Regular</span>
           <span class="scheme-meta" id="metaRegular">Umum &amp; Wiraswasta</span>
         </span>
         <span class="scheme-check" aria-hidden="true"></span>
@@ -45,7 +45,7 @@
       <button type="button" class="scheme-btn" data-scheme="lnp">
         <span class="scheme-num">2</span>
         <span class="scheme-info">
-          <span class="scheme-name">BRI KKB LNP</span>
+          <span class="scheme-name">LNP</span>
           <span class="scheme-meta" id="metaLnp">Nasabah Prioritas</span>
         </span>
         <span class="scheme-check" aria-hidden="true"></span>
@@ -54,7 +54,7 @@
       <button type="button" class="scheme-btn" data-scheme="karyawan">
         <span class="scheme-num">3</span>
         <span class="scheme-info">
-          <span class="scheme-name">BRI KKB Karyawan</span>
+          <span class="scheme-name">Karyawan</span>
           <span class="scheme-meta" id="metaKaryawan">Payroll &amp; Pekerja BRI Group</span>
         </span>
         <span class="scheme-check" aria-hidden="true"></span>
@@ -289,63 +289,60 @@
           </div>
         </section>
 
-        <!-- Rincian Tabel TDP & Tabel Asuransi Tahunan (Berdampingan sesuai resolusi) -->
-        <section class="card result-details">
-          <div class="card-header"><h2 class="card-title">Rincian pembayaran awal &amp; asuransi</h2></div>
-        <div class="split-tables">
-          <!-- Tabel Komponen TDP & Biaya Kredit -->
-          <section class="card" aria-label="Tabel Rincian TDP dan Biaya Kredit">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Rincian TDP &amp; Biaya Kredit (<span id="detailTenorSpan">36</span> Bln)</h2>
-                <p class="card-subtitle">TDP = DP + Asuransi + Biaya Kredit</p>
-              </div>
+        <!-- Rincian Tabel TDP & Biaya Kredit -->
+        <section class="card" aria-label="Tabel Rincian TDP dan Biaya Kredit">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Rincian TDP &amp; Biaya Kredit (<span id="detailTenorSpan">36</span> Bln)</h2>
+              <p class="card-subtitle">TDP = DP Murni + Premi Asuransi + Biaya Kredit</p>
             </div>
-            <div class="table-wrap">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Komponen Biaya</th>
-                    <th class="num">Nominal (Rp)</th>
-                    <th class="col-ket">Keterangan</th>
-                  </tr>
-                </thead>
-                <tbody id="tdpTableBody"></tbody>
-                <tfoot id="tdpTableFoot"></tfoot>
-              </table>
-            </div>
-          </section>
-
-          <!-- Tabel Asuransi & Depresiasi per Tahun -->
-          <section class="card" aria-label="Tabel Premi Asuransi per Tahun">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Rincian Asuransi &amp; Depresiasi per Tahun</h2>
-                <p class="card-subtitle" id="insSubtitleBadge">Coverage Bundling KKB</p>
-              </div>
-            </div>
-            <div class="table-wrap">
-              <table class="table stack">
-                <thead>
-                  <tr>
-                    <th>Tahun</th>
-                    <th class="num">Premi (Rp)</th>
-                    <th class="num">Pertanggungan</th>
-                    <th class="num">Depresiasi</th>
-                    <th class="col-ket">Coverage</th>
-                    <th class="num">Total Rate</th>
-                  </tr>
-                </thead>
-                <tbody id="yearlyInsuranceBody"></tbody>
-                <tfoot id="yearlyInsuranceFoot"></tfoot>
-              </table>
-            </div>
-          </section>
-        </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Komponen Biaya</th>
+                  <th class="num">Nominal (Rp)</th>
+                  <th class="col-ket">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="tdpTableBody"></tbody>
+              <tfoot id="tdpTableFoot"></tfoot>
+            </table>
+          </div>
         </section>
 
-        <!-- OUTPUT 2: Tabel Jadwal Amortisasi & Anotasi Lengkap Per Bulan (Tanpa Grafik) -->
-        <section class="card result-details" aria-label="Jadwal Amortisasi dan Anotasi Per Bulan">
+        <!-- Tabel Asuransi & Depresiasi per Tahun (diminimize secara default) -->
+        <section class="card" aria-label="Tabel Premi Asuransi per Tahun">
+          <div class="card-header card-header-toggle" id="btnToggleInsurance" style="cursor:pointer;" title="Klik untuk menampilkan/menyembunyikan rincian asuransi per tahun">
+            <div>
+              <h2 class="card-title">Rincian Asuransi &amp; Depresiasi per Tahun</h2>
+              <p class="card-subtitle" id="insSubtitleBadge">Coverage Bundling KKB (Klik untuk membuka)</p>
+            </div>
+            <button type="button" class="btn btn-outline btn-xs" id="btnToggleInsuranceIcon" tabindex="-1">
+              <span id="insArrowText">▶ Buka Rincian</span>
+            </button>
+          </div>
+          <div class="table-wrap" id="wrapYearlyInsurance" style="display:none;">
+            <table class="table stack">
+              <thead>
+                <tr>
+                  <th>Tahun</th>
+                  <th class="num">Premi (Rp)</th>
+                  <th class="num">Pertanggungan</th>
+                  <th class="num">Depresiasi</th>
+                  <th class="col-ket">Coverage</th>
+                  <th class="num">Total Rate</th>
+                </tr>
+              </thead>
+              <tbody id="yearlyInsuranceBody"></tbody>
+              <tfoot id="yearlyInsuranceFoot"></tfoot>
+            </table>
+          </div>
+        </section>
+
+        <!-- OUTPUT 2: Tabel Jadwal Angsuran Bulanan (Tanpa Anotasi Bulanan) -->
+        <section class="card" aria-label="Jadwal Angsuran Bulanan">
           <div class="card-header">
             <div>
               <h2 class="card-title">Jadwal Angsuran Bulanan (Tenor <span id="amortTenorSpan">36</span> Bulan)</h2>
@@ -363,7 +360,6 @@
                   <th class="num">Porsi Bunga</th>
                   <th class="num">Total Angsuran</th>
                   <th class="num">Sisa Pokok</th>
-                  <th>Anotasi Bulanan</th>
                 </tr>
               </thead>
               <tbody id="amortizationBody"></tbody>

@@ -42,6 +42,7 @@
     provisiBasis: 'principal',
     fidusiaBasis: 'price',
     bracketBasis: 'depreciated',
+    isCreditFeesCollapsed: true,
     schemes: cloneDeep(Config.DEFAULT_SCHEMES)
   };
 
@@ -379,7 +380,7 @@
             </td>
             <td class="num" data-label="Suku Bunga Flat">${formatPct(row.flatRatePa)}</td>
             <td class="num strong text-blue" data-label="Angsuran / Bulan">${formatRupiah(row.monthlyInstallment)}</td>
-            <td class="num strong text-orange" data-label="Total DP (TDP)">${formatRupiah(row.totalDp)}</td>
+            <td class="num strong text-dark" data-label="Total DP (TDP)">${formatRupiah(row.totalDp)}</td>
           </tr>
         `;
       })
@@ -405,6 +406,7 @@
     const fees = active.creditFees;
     const ins = active.insurance;
     const covLabel = ins.coverage.label.split(' (')[0];
+    const isCollapsed = state.isCreditFeesCollapsed;
 
     const rowsHtml = `
       <tr>
@@ -417,35 +419,38 @@
         <td class="num strong">${formatRupiah(ins.totalPremium)}</td>
         <td class="muted col-ket">${covLabel} (${active.tenorYears} Tahun • ${state.vehicleType})</td>
       </tr>
-      <tr class="subtotal-row">
-        <td>3. Total Biaya Kredit</td>
-        <td class="num">${formatRupiah(fees.totalCreditFees)}</td>
-        <td class="muted col-ket">Admin + Provisi + Polis + Fidusia + Blokir</td>
+      <tr class="subtotal-row" id="btnToggleCreditFees" style="cursor:pointer;" title="Klik untuk menampilkan atau menyembunyikan rincian biaya kredit">
+        <td class="strong" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <span>3. Total Biaya Kredit</span>
+          <span class="tag tag-gray" style="font-size:0.68rem; font-weight:600; cursor:pointer;">${isCollapsed ? '▶ Buka Rincian' : '▼ Sembunyikan'}</span>
+        </td>
+        <td class="num strong">${formatRupiah(fees.totalCreditFees)}</td>
+        <td class="col-ket"></td>
       </tr>
-      <tr class="subrow">
+      <tr class="subrow fee-subrow" style="${isCollapsed ? 'display:none;' : ''}">
         <td style="padding-left:28px;">• Biaya Admin</td>
         <td class="num">${formatRupiah(fees.adminFee)}</td>
-        <td class="muted col-ket">Administrasi kredit</td>
+        <td class="col-ket"></td>
       </tr>
-      <tr class="subrow">
+      <tr class="subrow fee-subrow" style="${isCollapsed ? 'display:none;' : ''}">
         <td style="padding-left:28px;">• Biaya Provisi</td>
         <td class="num">${formatRupiah(fees.provisiAmount)}</td>
-        <td class="muted col-ket">${formatPct(fees.provisiPct)} × ${state.provisiBasis === 'price' ? 'Harga Kendaraan' : 'Pokok Hutang'}</td>
+        <td class="col-ket"></td>
       </tr>
-      <tr class="subrow">
+      <tr class="subrow fee-subrow" style="${isCollapsed ? 'display:none;' : ''}">
         <td style="padding-left:28px;">• Biaya Polis</td>
         <td class="num">${formatRupiah(fees.polisFee)}</td>
-        <td class="muted col-ket">Penerbitan polis asuransi</td>
+        <td class="col-ket"></td>
       </tr>
-      <tr class="subrow">
+      <tr class="subrow fee-subrow" style="${isCollapsed ? 'display:none;' : ''}">
         <td style="padding-left:28px;">• Biaya Fidusia</td>
         <td class="num">${formatRupiah(fees.fidusiaFee)}</td>
-        <td class="muted col-ket">${fees.fidusiaBracket}</td>
+        <td class="col-ket"></td>
       </tr>
-      <tr class="subrow">
+      <tr class="subrow fee-subrow" style="${isCollapsed ? 'display:none;' : ''}">
         <td style="padding-left:28px;">• Blokir BPKB</td>
         <td class="num">${formatRupiah(fees.blokirFee)}</td>
-        <td class="muted col-ket">Pengamanan agunan BPKB</td>
+        <td class="col-ket"></td>
       </tr>
       ${
         active.firstInstallmentInTdp > 0
@@ -463,7 +468,7 @@
     $('tdpTableFoot').innerHTML = `
       <tr>
         <td>TOTAL DOWN PAYMENT (TDP)</td>
-        <td class="num text-orange">${formatRupiah(active.totalDp)}</td>
+        <td class="num strong text-dark">${formatRupiah(active.totalDp)}</td>
         <td class="muted col-ket">${
           active.installmentType === 'ADDM'
             ? 'DP + Asuransi + Biaya Kredit + Angsuran Ke-1'
@@ -471,6 +476,14 @@
         }</td>
       </tr>
     `;
+
+    const toggleBtn = $('btnToggleCreditFees');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        state.isCreditFeesCollapsed = !state.isCreditFeesCollapsed;
+        renderTdpTable(active);
+      });
+    }
   }
 
   function renderInsuranceTable(insurance) {
@@ -497,7 +510,7 @@
     $('yearlyInsuranceFoot').innerHTML = `
       <tr>
         <td>TOTAL PREMI ASURANSI (${insurance.years} TAHUN)</td>
-        <td class="num text-orange" data-label="Total Premi">${formatRupiah(insurance.totalPremium)}</td>
+        <td class="num strong text-dark" data-label="Total Premi">${formatRupiah(insurance.totalPremium)}</td>
         <td colspan="4" class="muted col-ket hide-sm">Akumulasi premi tahun 1 s.d. tahun ${insurance.years}</td>
       </tr>
     `;
@@ -521,10 +534,9 @@
             <td><strong>${r.month}</strong></td>
             <td class="num hide-laptop">${formatRupiah(r.beginningBalance)}</td>
             <td class="num text-blue strong">${formatRupiah(r.principalPart)}</td>
-            <td class="num text-orange">${formatRupiah(r.interestPart)}</td>
+            <td class="num">${formatRupiah(r.interestPart)}</td>
             <td class="num strong">${formatRupiah(r.installment)}</td>
             <td class="num">${formatRupiah(r.endingBalance)}</td>
-            <td class="annot"><span class="annot-dot"></span>${r.annotation}</td>
           </tr>
         `;
       })
@@ -538,7 +550,6 @@
         <td class="num">${formatRupiah(tInt)}</td>
         <td class="num">${formatRupiah(tPmt)}</td>
         <td class="num">Rp 0</td>
-        <td>Akumulasi ${rows.length} bulan angsuran</td>
       </tr>
     `;
   }
@@ -1108,6 +1119,17 @@
       state.installmentType = e.target.value;
       recalculateAndRender();
     });
+
+    const btnToggleIns = $('btnToggleInsurance');
+    if (btnToggleIns) {
+      btnToggleIns.addEventListener('click', () => {
+        const wrap = $('wrapYearlyInsurance');
+        const arrow = $('insArrowText');
+        const isHidden = wrap.style.display === 'none';
+        wrap.style.display = isHidden ? 'block' : 'none';
+        if (arrow) arrow.textContent = isHidden ? '▼ Sembunyikan' : '▶ Buka Rincian';
+      });
+    }
 
     // Reset Form
     $('btnResetForm').addEventListener('click', () => {

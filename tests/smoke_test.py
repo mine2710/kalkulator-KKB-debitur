@@ -27,10 +27,13 @@ with sync_playwright() as p:
     assert page.locator("#inputBlokirFee").input_value() == "500.000"
     assert page.locator("#perilCheckboxesContainer .peril-rate").count() == 0
     assert page.locator(".table-amort th", has_text="Progres").count() == 0
+    assert page.locator(".table-amort th", has_text="Anotasi").count() == 0
     assert page.locator("#amortizationBody .progress").count() == 0
     assert page.locator("details, summary").count() == 0
     assert page.locator("#btnAmortFlat, #btnAmortAnuitas").count() == 0
     assert page.get_by_text("Proporsional Flat", exact=False).count() == 0
+    assert page.locator("#wrapYearlyInsurance").is_hidden()
+    assert page.locator(".fee-subrow").first.is_hidden()
     logo = page.locator(".brand-logo")
     assert logo.get_attribute("src") == "LOGO_BRI_KKB.png"
     assert logo.evaluate("img => img.complete && img.naturalWidth > 0"), "logo failed to load"
@@ -120,7 +123,7 @@ with sync_playwright() as p:
     assert "20,0%" in page.locator("#dpMinText").inner_text()
     page.select_option("#inputFinancingType", "Refinancing")
     page.locator('tr[data-tenor="60"]').dispatch_event('click')
-    assert "36 BLN" in page.locator("#kpiTenorLabel").inner_text()
+    assert "36 Bln" in page.locator("#kpiTenorLabel").text_content()
     page.select_option("#inputFinancingType", "Niaga Barang")
     assert "9,31%" in page.locator("#kpiRateInfo").inner_text()
     page.click('[data-scheme="karyawan"]')
@@ -149,7 +152,10 @@ with sync_playwright() as p:
         assert page.locator(".advanced-settings").is_visible()
         assert page.locator("#inputCoverage").is_visible()
         assert page.locator("#tdpTableBody").is_visible()
+        page.click("#btnToggleInsurance")
         assert page.locator("#yearlyInsuranceBody").is_visible()
+        page.click("#btnToggleInsurance")
+        assert page.locator("#wrapYearlyInsurance").is_hidden()
         assert page.locator("#amortizationBody").is_visible()
         assert logo.is_visible()
     # Editing the CSV alone changes dropdown options and DP; removed defaults must also work on reset.
