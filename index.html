@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css?v=3" />
-  <link rel="stylesheet" href="css/simple.css?v=3" />
+  <link rel="stylesheet" href="css/styles.css?v=4" />
+  <link rel="stylesheet" href="css/simple.css?v=4" />
 </head>
 <body>
   <!-- ======================== NAVBAR ======================== -->
@@ -77,14 +77,15 @@
             <!-- ===== KOLOM KIRI: Pembiayaan s.d. Down Payment ===== -->
             <div class="form-col">
               <div class="form-section">
-                <h3 class="form-section-title">1. Pembiayaan</h3>
-                <div class="field-row">
+                <h3 class="form-section-title"><span class="col-step">1</span> Pembiayaan &amp; Down Payment</h3>
+
+                <div class="field-row field-row-pembiayaan">
                   <div class="field">
                     <label class="label" for="inputFinancingType">Jenis Pembiayaan</label>
                     <select id="inputFinancingType" class="control">
-                      <option value="New Car" selected>New Car (Mobil/Kendaraan Baru)</option>
-                      <option value="Used Car">Used Car (Kendaraan Bekas)</option>
-                      <option value="Refinancing">Refinancing (Fasilitas Dana)</option>
+                      <option value="New Car" selected>New Car (Mobil Baru)</option>
+                      <option value="Used Car">Used Car (Mobil Bekas)</option>
+                      <option value="Refinancing">Refinancing</option>
                       <option value="Mobil Niaga">Mobil Niaga</option>
                     </select>
                   </div>
@@ -96,13 +97,10 @@
                     </select>
                   </div>
                 </div>
-              </div>
 
-              <div class="form-section">
-                <h3 class="form-section-title">2. Kendaraan &amp; Harga</h3>
                 <div class="field-row">
                   <div class="field">
-                    <label class="label" for="inputBrand">Merk</label>
+                    <label class="label" for="inputBrand">Merk Kendaraan</label>
                     <select id="inputBrand" class="control"></select>
                   </div>
                   <div class="field">
@@ -110,10 +108,9 @@
                     <select id="inputModel" class="control"></select>
                   </div>
                 </div>
-                <p class="hint" style="margin-top:-6px;">Minimum DP otomatis sesuai merk dan tipe yang dipilih.</p>
 
                 <div class="field">
-                  <label class="label" for="inputVehiclePrice">Harga Kendaraan</label>
+                  <label class="label" for="inputVehiclePrice">Harga Kendaraan (OTR)</label>
                   <div class="input-group has-left">
                     <span class="addon addon-left">Rp</span>
                     <input type="text" id="inputVehiclePrice" class="control" inputmode="numeric" value="350.000.000" autocomplete="off" />
@@ -126,13 +123,10 @@
                     <button type="button" class="chip" data-price="850000000">850 Jt</button>
                   </div>
                 </div>
-              </div>
 
-              <div class="form-section">
-                <h3 class="form-section-title">3. Down Payment (DP)</h3>
-                <div class="field">
+                <div class="field field-bottom">
                   <div class="label">
-                    <label for="inputDpValue">Uang Muka Murni</label>
+                    <label for="inputDpValue">Down Payment (DP Murni)</label>
                     <div class="segmented" role="group" aria-label="Mode Input DP">
                       <button type="button" class="active" id="btnDpModePct">Persen (%)</button>
                       <button type="button" id="btnDpModeRp">Rupiah (Rp)</button>
@@ -159,7 +153,8 @@
             <!-- ===== KOLOM TENGAH: Asuransi ===== -->
             <div class="form-col advanced-settings">
               <div class="form-section">
-                <h3 class="form-section-title">4. Asuransi Bundling</h3>
+                <h3 class="form-section-title"><span class="col-step">2</span> Asuransi Kendaraan</h3>
+
                 <div class="field">
                   <label class="label" for="inputWilayah">Wilayah Asuransi</label>
                   <select id="inputWilayah" class="control">
@@ -175,7 +170,7 @@
                   <div class="info-box" id="coverageCriteriaText"></div>
                 </div>
 
-                <div class="field">
+                <div class="field field-bottom">
                   <div class="label">
                     <span>Syarat Klaim / Perluasan</span>
                     <button type="button" class="btn btn-ghost btn-xs" id="btnSelectAllPerils">Pilih Semua</button>
@@ -188,24 +183,24 @@
             <!-- ===== KOLOM KANAN: Biaya Kredit ===== -->
             <div class="form-col">
               <div class="form-section">
-                <h3 class="form-section-title">5. Biaya Kredit</h3>
-                <div class="field-row">
-                  <div class="field">
-                    <label class="label" for="inputAdminFee">Biaya Admin</label>
-                    <div class="input-group has-left">
-                      <span class="addon addon-left">Rp</span>
-                      <input type="text" id="inputAdminFee" class="control" inputmode="numeric" value="2.000.000" autocomplete="off" />
-                    </div>
-                  </div>
-                  <div class="field">
-                    <label class="label" for="inputProvisiPct">Biaya Provisi</label>
-                    <div class="input-group has-right">
-                      <input type="text" id="inputProvisiPct" class="control" inputmode="decimal" value="1,00" autocomplete="off" />
-                      <span class="addon addon-right">%</span>
-                    </div>
+                <h3 class="form-section-title"><span class="col-step">3</span> Biaya Kredit</h3>
+
+                <div class="field">
+                  <label class="label" for="inputAdminFee">Biaya Admin</label>
+                  <div class="input-group has-left">
+                    <span class="addon addon-left">Rp</span>
+                    <input type="text" id="inputAdminFee" class="control" inputmode="numeric" value="2.000.000" autocomplete="off" />
                   </div>
                 </div>
-                <div class="hint" id="provisiRpCaption" style="margin:0 0 12px;"></div>
+
+                <div class="field">
+                  <label class="label" for="inputProvisiPct">Biaya Provisi</label>
+                  <div class="input-group has-right">
+                    <input type="text" id="inputProvisiPct" class="control" inputmode="decimal" value="1,00" autocomplete="off" />
+                    <span class="addon addon-right">%</span>
+                  </div>
+                  <div class="hint" id="provisiRpCaption"></div>
+                </div>
 
                 <div class="field-row">
                   <div class="field">
@@ -225,6 +220,15 @@
                 </div>
 
                 <div class="field">
+                  <label class="label" for="inputInstallmentType">Skema Angsuran</label>
+                  <select id="inputInstallmentType" class="control">
+                    <option value="ADDB" selected>ADDB — Bayar di Belakang (1 Bln Pasca Akad)</option>
+                    <option value="ADDM">ADDM — Angsuran ke-1 Masuk TDP</option>
+                  </select>
+                  <div class="hint" id="installmentTypeCaption">Angsuran ke-1 dibayar bulan depan (sudah termasuk bunga).</div>
+                </div>
+
+                <div class="field field-bottom">
                   <div class="fee-auto">
                     <div>
                       <div style="font-weight:600;">Biaya Fidusia Otomatis</div>
@@ -232,14 +236,6 @@
                     </div>
                     <strong id="fidusiaFeeDisplay">Rp 0</strong>
                   </div>
-                </div>
-
-                <div class="field">
-                  <label class="label" for="inputInstallmentType">Skema Angsuran</label>
-                  <select id="inputInstallmentType" class="control">
-                    <option value="ADDB" selected>ADDB — TDP = DP + Asuransi + Biaya Kredit</option>
-                    <option value="ADDM">ADDM — Angsuran ke-1 masuk TDP</option>
-                  </select>
                 </div>
               </div>
             </div>
@@ -404,11 +400,11 @@
     </div>
   </div>
 
-  <script src="js/csv.js?v=3"></script>
-  <script src="js/vehicles.js?v=3"></script>
-  <script src="js/config.js?v=3"></script>
-  <script src="js/rates.js?v=3"></script>
-  <script src="js/calculator.js?v=3"></script>
-  <script src="js/app.js?v=3"></script>
+  <script src="js/csv.js?v=4"></script>
+  <script src="js/vehicles.js?v=4"></script>
+  <script src="js/config.js?v=4"></script>
+  <script src="js/rates.js?v=4"></script>
+  <script src="js/calculator.js?v=4"></script>
+  <script src="js/app.js?v=4"></script>
 </body>
 </html>

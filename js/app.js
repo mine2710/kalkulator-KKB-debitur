@@ -342,6 +342,13 @@
       `Provisi = ${formatRupiah(active.creditFees.provisiAmount)} (${formatPct(state.provisiPct)} × ${state.provisiBasis === 'price' ? 'Harga Kendaraan' : 'Pokok Hutang'})`;
     $('fidusiaBracketInfo').textContent = active.creditFees.fidusiaBracket;
     $('fidusiaFeeDisplay').textContent = formatRupiah(active.creditFees.fidusiaFee);
+    const instCap = $('installmentTypeCaption');
+    if (instCap) {
+      instCap.textContent =
+        active.installmentType === 'ADDM'
+          ? 'Angsuran ke-1 masuk TDP saat akad (bulan ke-1 tanpa bunga).'
+          : 'Angsuran ke-1 dibayar 1 bulan pasca akad (sudah termasuk bunga).';
+    }
 
     // KPI Cards
     $('kpiTenorLabel').textContent = `Angsuran / Bulan • Tenor ${active.tenorMonths} Bln`;

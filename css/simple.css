@@ -91,19 +91,69 @@ body {
 .workspace { grid-template-columns: minmax(0, 1fr); gap: 24px; }
 .results { gap: 24px; }
 
-/* Form di atas: kiri Pembiayaan s.d. DP, tengah Asuransi, kanan Biaya Kredit */
+/* Form di atas: 3 panel sejajar & seimbang (kiri Pembiayaan-DP, tengah Asuransi, kanan Biaya Kredit) */
+.form-card .card-header { padding: 18px 24px 14px; }
 .form-card .form-grid.form-cols {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
-  align-items: start;
+  gap: 18px;
+  align-items: stretch;
 }
-.form-cols > .form-col { min-width: 0; padding: 0 28px; }
-.form-cols > .form-col:first-child { padding-left: 0; }
-.form-cols > .form-col:last-child { padding-right: 0; }
-.form-cols > .form-col + .form-col { border-left: 1px solid var(--border); }
-.form-cols .form-col > .form-section + .form-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
-.form-cols .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.form-cols > .form-col {
+  min-width: 0;
+  padding: 18px 20px;
+  background: #f8fafd;
+  border: 1px solid #e5edf6;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+}
+.form-cols > .form-col > .form-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.form-cols .form-section-title,
+.form-cols .advanced-settings .form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5edf6;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.col-step {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--bri-blue);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.form-cols .control,
+.form-cols .input-group { background: #ffffff; }
+.form-cols .peril-item { background: #ffffff; padding: 9px 11px; }
+.form-cols .peril-item.checked { background: var(--bri-blue-soft); }
+.form-cols .info-box { background: #ffffff; border: 1px solid #e5edf6; margin-top: 8px; padding: 9px 11px; line-height: 1.45; }
+.form-cols .fee-auto { background: #ffffff; border: 1px solid #cfe2f5; border-radius: 10px; padding: 11px 13px; }
+.form-cols .dp-status { background: #ffffff; border: 1px solid #cfe2f5; margin-top: 8px; }
+.form-cols .field { margin-bottom: 14px; }
+.form-cols .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.form-cols .field-row-pembiayaan { grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.92fr); }
+.form-cols .field-bottom { margin-top: auto; margin-bottom: 0; }
+.form-cols .chips { margin-top: 8px; gap: 6px; }
+.form-cols .chip { background: #ffffff; padding: 4px 9px; font-size: 0.7rem; }
 
 /* Ringkasan: tabel tenor & rincian TDP berdampingan di layar lebar */
 .summary-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
@@ -157,28 +207,16 @@ body {
 }
 
 /* Tablet: Pembiayaan & Asuransi berdampingan, Biaya Kredit di bawah selebar penuh */
-@media (max-width: 1024px) {
-  .form-card .form-grid.form-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .form-cols > .form-col:nth-child(2) { padding-right: 0; }
-  .form-cols > .form-col:nth-child(3) {
-    grid-column: 1 / -1;
-    padding: 20px 0 0;
-    margin-top: 20px;
-    border-left: 0;
-    border-top: 1px solid var(--border);
-  }
+@media (max-width: 1080px) {
+  .form-card .form-grid.form-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .form-cols > .form-col:nth-child(3) { grid-column: 1 / -1; }
 }
 
 @media (max-width: 720px) {
-  .form-card .form-grid.form-cols { grid-template-columns: minmax(0, 1fr); }
+  .form-card .form-grid.form-cols { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .form-cols > .form-col,
-  .form-cols > .form-col:nth-child(3) { padding: 0; grid-column: auto; }
-  .form-cols > .form-col + .form-col {
-    border-left: 0;
-    border-top: 1px solid var(--border);
-    margin-top: 20px;
-    padding-top: 20px;
-  }
+  .form-cols > .form-col:nth-child(3) { padding: 16px; grid-column: auto; }
+  .form-cols .field-row-pembiayaan { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
