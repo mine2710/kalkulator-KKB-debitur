@@ -62,8 +62,8 @@
     </section>
 
     <div class="workspace">
-      <!-- ======================== KOLOM KIRI: FORM INPUT ======================== -->
-      <aside class="card form-card" aria-label="Form Input Data Kredit">
+      <!-- ======================== FORM INPUT (ATAS, 3 KOLOM) ======================== -->
+      <section class="card form-card" aria-label="Form Input Data Kredit">
         <div class="card-header">
           <div>
             <h2 class="card-title">Data Kredit</h2>
@@ -73,177 +73,172 @@
         </div>
 
         <div class="card-body">
-          <div class="form-grid">
-            <!-- A. Jenis Kredit -->
-            <div class="form-section">
-              <h3 class="form-section-title">1. Pembiayaan</h3>
-
-
-              <div class="field">
-                <label class="label" for="inputFinancingType">Jenis Pembiayaan</label>
-                <select id="inputFinancingType" class="control">
-                  <option value="New Car" selected>New Car (Mobil/Kendaraan Baru)</option>
-                  <option value="Used Car">Used Car (Kendaraan Bekas)</option>
-                  <option value="Refinancing">Refinancing (Fasilitas Dana)</option>
-                  <option value="Niaga Barang">Niaga Barang (New Car Commercial)</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- B. Kendaraan & Harga -->
-            <div class="form-section">
-              <h3 class="form-section-title">2. Kendaraan &amp; Harga</h3>
-
-              <div class="field">
-                <label class="label" for="inputBrand">Merk</label>
-                <select id="inputBrand" class="control"></select>
-              </div>
-              <div class="field">
-                <label class="label" for="inputModel">Tipe / Model</label>
-                <select id="inputModel" class="control"></select>
-                <p class="hint">Minimum DP otomatis sesuai merk dan tipe yang dipilih.</p>
-              </div>
-
-              <div class="field">
-                <label class="label" for="inputVehiclePrice">Harga Kendaraan</label>
-                <div class="input-group has-left">
-                  <span class="addon addon-left">Rp</span>
-                  <input type="text" id="inputVehiclePrice" class="control" inputmode="numeric" value="350.000.000" autocomplete="off" />
-                </div>
-                <div class="chips">
-                  <button type="button" class="chip" data-price="150000000">150 Jt</button>
-                  <button type="button" class="chip" data-price="250000000">250 Jt</button>
-                  <button type="button" class="chip" data-price="350000000">350 Jt</button>
-                  <button type="button" class="chip" data-price="500000000">500 Jt</button>
-                  <button type="button" class="chip" data-price="850000000">850 Jt</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- C. Down Payment -->
-            <div class="form-section">
-              <h3 class="form-section-title">3. Down Payment (DP)</h3>
-
-              <div class="field">
-                <div class="label">
-                  <label for="inputDpValue">Uang Muka Murni</label>
-                  <div class="segmented" role="group" aria-label="Mode Input DP">
-                    <button type="button" class="active" id="btnDpModePct">Persen (%)</button>
-                    <button type="button" id="btnDpModeRp">Rupiah (Rp)</button>
-                  </div>
-                </div>
-                <div class="input-group has-right" id="dpInputWrap">
-                  <span class="addon addon-left" id="dpAddonLeft" hidden>Rp</span>
-                  <input type="text" id="inputDpValue" class="control" inputmode="decimal" value="20" autocomplete="off" />
-                  <span class="addon addon-right" id="dpAddonRight">%</span>
-                </div>
-                <div class="hint" id="dpConvertedCaption"></div>
-
-                <div class="dp-status" id="dpMinBox" aria-live="polite">
-                  <div>
-                    <div id="dpMinText"></div>
-                    <div class="dp-status-detail" id="dpFactorsList"></div>
-                  </div>
-                  <button type="button" class="btn btn-outline btn-xs" id="btnApplyMinDp">Pakai Min</button>
-                </div>
-              </div>
-            </div>
-
-            <section class="form-section advanced-settings">
-              <h3 class="form-section-title">Pengaturan lanjutan</h3>
-              <p class="card-subtitle">Asuransi &amp; biaya kredit</p>
-              <div class="details-body">
-              <div class="field">
-                <label class="label" for="inputWilayah">Wilayah Asuransi</label>
-                <select id="inputWilayah" class="control">
-                  <option value="1">1 - Pulau Sumatera</option>
-                  <option value="2" selected>2 - DKI Jakarta &amp; Banten</option>
-                  <option value="3">3 - Selain Wilayah 1 &amp; 2</option>
-                </select>
-              </div>
-            <!-- D. Asuransi -->
-            <div class="form-section">
-              <h3 class="form-section-title">4. Asuransi Bundling</h3>
-
-              <div class="field">
-                <label class="label" for="inputCoverage">Coverage Asuransi</label>
-                <select id="inputCoverage" class="control"></select>
-                <div class="info-box" id="coverageCriteriaText"></div>
-              </div>
-
-              <div class="field">
-                <div class="label">
-                  <span>Syarat Klaim / Perluasan</span>
-                  <button type="button" class="btn btn-ghost btn-xs" id="btnSelectAllPerils">Pilih Semua</button>
-                </div>
-                <div class="peril-list" id="perilCheckboxesContainer"></div>
-              </div>
-            </div>
-
-            <!-- E. Biaya Kredit -->
-            <div class="form-section">
-              <h3 class="form-section-title">5. Biaya Kredit</h3>
-
-              <div class="field-row">
+          <div class="form-grid form-cols">
+            <!-- ===== KOLOM KIRI: Pembiayaan s.d. Down Payment ===== -->
+            <div class="form-col">
+              <div class="form-section">
+                <h3 class="form-section-title">1. Pembiayaan</h3>
                 <div class="field">
-                  <label class="label" for="inputAdminFee">Biaya Admin</label>
+                  <label class="label" for="inputFinancingType">Jenis Pembiayaan</label>
+                  <select id="inputFinancingType" class="control">
+                    <option value="New Car" selected>New Car (Mobil/Kendaraan Baru)</option>
+                    <option value="Used Car">Used Car (Kendaraan Bekas)</option>
+                    <option value="Refinancing">Refinancing (Fasilitas Dana)</option>
+                    <option value="Mobil Niaga">Mobil Niaga</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3 class="form-section-title">2. Kendaraan &amp; Harga</h3>
+                <div class="field-row">
+                  <div class="field">
+                    <label class="label" for="inputBrand">Merk</label>
+                    <select id="inputBrand" class="control"></select>
+                  </div>
+                  <div class="field">
+                    <label class="label" for="inputModel">Tipe / Model</label>
+                    <select id="inputModel" class="control"></select>
+                  </div>
+                </div>
+                <p class="hint" style="margin-top:-6px;">Minimum DP otomatis sesuai merk dan tipe yang dipilih.</p>
+
+                <div class="field">
+                  <label class="label" for="inputVehiclePrice">Harga Kendaraan</label>
                   <div class="input-group has-left">
                     <span class="addon addon-left">Rp</span>
-                    <input type="text" id="inputAdminFee" class="control" inputmode="numeric" value="2.000.000" autocomplete="off" />
+                    <input type="text" id="inputVehiclePrice" class="control" inputmode="numeric" value="350.000.000" autocomplete="off" />
                   </div>
-                </div>
-                <div class="field">
-                  <label class="label" for="inputProvisiPct">Biaya Provisi</label>
-                  <div class="input-group has-right">
-                    <input type="text" id="inputProvisiPct" class="control" inputmode="decimal" value="1,00" autocomplete="off" />
-                    <span class="addon addon-right">%</span>
-                  </div>
-                </div>
-              </div>
-              <div class="hint" id="provisiRpCaption" style="margin:0 0 12px;"></div>
-
-              <div class="field-row">
-                <div class="field">
-                  <label class="label" for="inputPolisFee">Biaya Polis</label>
-                  <div class="input-group has-left">
-                    <span class="addon addon-left">Rp</span>
-                    <input type="text" id="inputPolisFee" class="control" inputmode="numeric" value="60.000" autocomplete="off" />
-                  </div>
-                </div>
-                <div class="field">
-                  <label class="label" for="inputBlokirFee">Blokir BPKB</label>
-                  <div class="input-group has-left">
-                    <span class="addon addon-left">Rp</span>
-                    <input type="text" id="inputBlokirFee" class="control" inputmode="numeric" value="500.000" autocomplete="off" />
+                  <div class="chips">
+                    <button type="button" class="chip" data-price="150000000">150 Jt</button>
+                    <button type="button" class="chip" data-price="250000000">250 Jt</button>
+                    <button type="button" class="chip" data-price="350000000">350 Jt</button>
+                    <button type="button" class="chip" data-price="500000000">500 Jt</button>
+                    <button type="button" class="chip" data-price="850000000">850 Jt</button>
                   </div>
                 </div>
               </div>
 
-              <div class="field">
-                <div class="fee-auto">
-                  <div>
-                    <div style="font-weight:600;">Biaya Fidusia Otomatis</div>
-                    <div class="hint" style="margin:0;" id="fidusiaBracketInfo"></div>
+              <div class="form-section">
+                <h3 class="form-section-title">3. Down Payment (DP)</h3>
+                <div class="field">
+                  <div class="label">
+                    <label for="inputDpValue">Uang Muka Murni</label>
+                    <div class="segmented" role="group" aria-label="Mode Input DP">
+                      <button type="button" class="active" id="btnDpModePct">Persen (%)</button>
+                      <button type="button" id="btnDpModeRp">Rupiah (Rp)</button>
+                    </div>
                   </div>
-                  <strong id="fidusiaFeeDisplay">Rp 0</strong>
-                </div>
-              </div>
+                  <div class="input-group has-right" id="dpInputWrap">
+                    <span class="addon addon-left" id="dpAddonLeft" hidden>Rp</span>
+                    <input type="text" id="inputDpValue" class="control" inputmode="decimal" value="20" autocomplete="off" />
+                    <span class="addon addon-right" id="dpAddonRight">%</span>
+                  </div>
+                  <div class="hint" id="dpConvertedCaption"></div>
 
-              <div class="field">
-                <label class="label" for="inputInstallmentType">Skema Angsuran</label>
-                <select id="inputInstallmentType" class="control">
-                  <option value="ADDB" selected>ADDB — TDP = DP + Asuransi + Biaya Kredit</option>
-                  <option value="ADDM">ADDM — Angsuran ke-1 masuk TDP</option>
-                </select>
+                  <div class="dp-status" id="dpMinBox" aria-live="polite">
+                    <div>
+                      <div id="dpMinText"></div>
+                      <div class="dp-status-detail" id="dpFactorsList"></div>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-xs" id="btnApplyMinDp">Pakai Min</button>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <!-- ===== KOLOM TENGAH: Asuransi ===== -->
+            <div class="form-col advanced-settings">
+              <div class="form-section">
+                <h3 class="form-section-title">4. Asuransi Bundling</h3>
+                <div class="field">
+                  <label class="label" for="inputWilayah">Wilayah Asuransi</label>
+                  <select id="inputWilayah" class="control">
+                    <option value="1">1 - Pulau Sumatera</option>
+                    <option value="2" selected>2 - DKI Jakarta &amp; Banten</option>
+                    <option value="3">3 - Selain Wilayah 1 &amp; 2</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label class="label" for="inputCoverage">Coverage Asuransi</label>
+                  <select id="inputCoverage" class="control"></select>
+                  <div class="info-box" id="coverageCriteriaText"></div>
+                </div>
+
+                <div class="field">
+                  <div class="label">
+                    <span>Syarat Klaim / Perluasan</span>
+                    <button type="button" class="btn btn-ghost btn-xs" id="btnSelectAllPerils">Pilih Semua</button>
+                  </div>
+                  <div class="peril-list" id="perilCheckboxesContainer"></div>
+                </div>
               </div>
-            </section>
+            </div>
+
+            <!-- ===== KOLOM KANAN: Biaya Kredit ===== -->
+            <div class="form-col">
+              <div class="form-section">
+                <h3 class="form-section-title">5. Biaya Kredit</h3>
+                <div class="field-row">
+                  <div class="field">
+                    <label class="label" for="inputAdminFee">Biaya Admin</label>
+                    <div class="input-group has-left">
+                      <span class="addon addon-left">Rp</span>
+                      <input type="text" id="inputAdminFee" class="control" inputmode="numeric" value="2.000.000" autocomplete="off" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="label" for="inputProvisiPct">Biaya Provisi</label>
+                    <div class="input-group has-right">
+                      <input type="text" id="inputProvisiPct" class="control" inputmode="decimal" value="1,00" autocomplete="off" />
+                      <span class="addon addon-right">%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="hint" id="provisiRpCaption" style="margin:0 0 12px;"></div>
+
+                <div class="field-row">
+                  <div class="field">
+                    <label class="label" for="inputPolisFee">Biaya Polis</label>
+                    <div class="input-group has-left">
+                      <span class="addon addon-left">Rp</span>
+                      <input type="text" id="inputPolisFee" class="control" inputmode="numeric" value="60.000" autocomplete="off" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="label" for="inputBlokirFee">Blokir BPKB</label>
+                    <div class="input-group has-left">
+                      <span class="addon addon-left">Rp</span>
+                      <input type="text" id="inputBlokirFee" class="control" inputmode="numeric" value="500.000" autocomplete="off" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="fee-auto">
+                    <div>
+                      <div style="font-weight:600;">Biaya Fidusia Otomatis</div>
+                      <div class="hint" style="margin:0;" id="fidusiaBracketInfo"></div>
+                    </div>
+                    <strong id="fidusiaFeeDisplay">Rp 0</strong>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label" for="inputInstallmentType">Skema Angsuran</label>
+                  <select id="inputInstallmentType" class="control">
+                    <option value="ADDB" selected>ADDB — TDP = DP + Asuransi + Biaya Kredit</option>
+                    <option value="ADDM">ADDM — Angsuran ke-1 masuk TDP</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </aside>
+      </section>
 
-      <!-- ======================== KOLOM KANAN: TABEL OUTPUT ======================== -->
+      <!-- ======================== RINGKASAN / OUTPUT (BAWAH) ======================== -->
       <div class="results">
         <p class="simulation-notice" id="simulationNotice" role="status" hidden></p>
         <!-- Ringkasan Angka Utama -->
@@ -265,6 +260,7 @@
           </div>
         </section>
 
+        <div class="summary-split">
         <!-- OUTPUT 1: Tabel Simulasi Tenor (Bulan) | Angsuran | Total DP -->
         <section class="card" aria-label="Tabel Simulasi Tenor">
           <div class="card-header">
@@ -279,7 +275,8 @@
               <thead>
                 <tr>
                   <th>Tenor (Bulan)</th>
-                  <th class="num">Suku Bunga Flat</th>
+                  <th class="num">Bunga Flat</th>
+                  <th class="num">Bunga Efektif</th>
                   <th class="num">Angsuran / Bulan</th>
                   <th class="num">Total DP (TDP)</th>
                 </tr>
@@ -311,6 +308,7 @@
             </table>
           </div>
         </section>
+        </div>
 
         <!-- Tabel Asuransi & Depresiasi per Tahun (diminimize secara default) -->
         <section class="card" aria-label="Tabel Premi Asuransi per Tahun">
@@ -398,8 +396,10 @@
     </div>
   </div>
 
+  <script src="js/csv.js"></script>
   <script src="js/vehicles.js"></script>
   <script src="js/config.js"></script>
+  <script src="js/rates.js"></script>
   <script src="js/calculator.js"></script>
   <script src="js/app.js"></script>
 </body>

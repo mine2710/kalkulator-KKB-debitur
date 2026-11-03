@@ -8,7 +8,7 @@
   const Config = global.KKBConfig;
   const Calc = global.KKBCalculator;
 
-  const STORAGE_KEY = 'bri_kkb_custom_settings_v2';
+  const STORAGE_KEY = 'bri_kkb_custom_settings_v3';
   const SCHEME_IDS = ['regular', 'lnp', 'karyawan'];
   const TENORS = [12, 24, 36, 48, 60];
 
@@ -81,12 +81,19 @@
   }
 
   // ======================== PERSISTENCE ========================
+  // Sidik jari default rates.csv: bila CSV berubah, kustomisasi lama di browser diabaikan.
+  function defaultRatesSignature() {
+    return JSON.stringify(
+      SCHEME_IDS.map((sId) => [Config.DEFAULT_SCHEMES[sId].interestRates, Config.DEFAULT_SCHEMES[sId].effectiveRates])
+    );
+  }
+
   function loadSavedSettings() {
     try {
       const raw = global.localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const saved = JSON.parse(raw);
-      if (saved.schemes) state.schemes = saved.schemes;
+      if (saved.schemes && saved.ratesSignature === defaultRatesSignature()) state.schemes = saved.schemes;
       if (saved.provisiBasis) state.provisiBasis = saved.provisiBasis;
       if (saved.fidusiaBasis) state.fidusiaBasis = saved.fidusiaBasis;
       if (saved.bracketBasis) state.bracketBasis = saved.bracketBasis;
@@ -101,6 +108,7 @@
         STORAGE_KEY,
         JSON.stringify({
           schemes: state.schemes,
+          ratesSignature: defaultRatesSignature(),
           provisiBasis: state.provisiBasis,
           fidusiaBasis: state.fidusiaBasis,
           bracketBasis: state.bracketBasis
@@ -335,7 +343,7 @@
     $('kpiTenorLabel').textContent = `Angsuran / Bulan • Tenor ${active.tenorMonths} Bln`;
     $('kpiMonthlyInstallment').textContent = formatRupiah(active.monthlyInstallment);
     $('kpiRateInfo').textContent =
-      `Bunga Flat ${formatPct(active.flatRatePa)} p.a. • Setara ±${formatPct(active.effectiveRatePa)} Efektif`;
+      `Bunga Flat ${formatPct(active.flatRatePa)} p.a. • Efektif ${formatPct(active.effectiveRatePa)} p.a.`;
     $('kpiTotalDp').textContent = formatRupiah(active.totalDp);
     $('kpiTdpSub').textContent =
       active.installmentType === 'ADDM'
@@ -354,7 +362,7 @@
 
     // 3. Tabel Jadwal Amortisasi & Anotasi Bulanan
     $('amortTenorSpan').textContent = active.tenorMonths;
-    const amortRows = Calc.generateAmortizationSchedule(active, 'anuitas');
+    const amortRows = Calc.generateAmortizationSchedule(active);
     renderAmortizationTable(amortRows, active);
 
     if ($('refModalBackdrop').classList.contains('open')) {
@@ -378,7 +386,8 @@
               ${isSel ? '<span class="tag tag-orange">Dipilih</span>' : ''}
               ${!row.isAvailable ? '<span class="tag tag-gray">Tidak tersedia</span>' : ''}
             </td>
-            <td class="num" data-label="Suku Bunga Flat">${formatPct(row.flatRatePa)}</td>
+            <td class="num" data-label="Bunga Flat">${formatPct(row.flatRatePa)}</td>
+            <td class="num" data-label="Bunga Efektif">${formatPct(row.effectiveRatePa)}</td>
             <td class="num strong text-blue" data-label="Angsuran / Bulan">${formatRupiah(row.monthlyInstallment)}</td>
             <td class="num strong text-dark" data-label="Total DP (TDP)">${formatRupiah(row.totalDp)}</td>
           </tr>
@@ -518,7 +527,7 @@
 
   function renderAmortizationTable(rows, active) {
     $('amortSubtitleInfo').textContent =
-      `Metode Anuitas Efektif ±${formatPct(active.effectiveRatePa)} p.a. (setara KPR — porsi bunga menurun, porsi pokok meningkat tiap bulan)`;
+      `Bunga Efektif ${formatPct(active.effectiveRatePa)} p.a. • Bulan ke-1 seluruhnya Porsi Pokok, bunga dihitung mulai bulan ke-2`;
 
     let tPrin = 0;
     let tInt = 0;
@@ -597,40 +606,49 @@
           ? Config.FINANCING_TYPES.map((f) => f.value)
           : [finFilter];
 
+      const rateTypes = [
+        { key: 'interestRates', label: 'Bunga Flat p.a. (%)' },
+        { key: 'effectiveRates', label: 'Bunga Efektif p.a. (%)' }
+      ];
+
       const sectionsHtml = finList
         .map((fin) => {
-          const rows = TENORS.map((t) => {
-            const cells = SCHEME_IDS.map((sId) => {
-              const sch = state.schemes[sId];
-              const allowed = (sch.tenorsByFinancing[fin] || TENORS).indexOf(t) !== -1;
-              return `
-                <td class="num">
-                  <input type="number" step="0.01" min="0" max="35" class="rate-input js-rate"
-                    data-fin="${fin}" data-scheme="${sId}" data-tenor="${t}" value="${sch.interestRates[fin][t]}" />
-                  ${allowed ? '' : '<div class="muted">di luar maks. skema</div>'}
-                </td>`;
-            }).join('');
-            const isHl = fin === state.financingType && t === state.selectedTenor;
-            return `<tr class="${isHl ? 'highlight' : ''}"><td><strong>${t} Bulan</strong> (${t / 12} Thn)</td>${cells}</tr>`;
-          }).join('');
+          const finTenors = TENORS.filter((t) =>
+            SCHEME_IDS.some((sId) => (state.schemes[sId].tenorsByFinancing[fin] || []).indexOf(t) !== -1)
+          );
+          return rateTypes
+            .map((rt) => {
+              const rows = finTenors.map((t) => {
+                const cells = SCHEME_IDS.map((sId) => {
+                  const sch = state.schemes[sId];
+                  const allowed = (sch.tenorsByFinancing[fin] || []).indexOf(t) !== -1;
+                  const val = ((sch[rt.key] || {})[fin] || {})[t];
+                  return allowed
+                    ? `<td class="num"><input type="number" step="0.01" min="0" max="50" class="rate-input js-rate"
+                        data-rate-key="${rt.key}" data-fin="${fin}" data-scheme="${sId}" data-tenor="${t}" value="${val}" /></td>`
+                    : '<td class="num muted">-</td>';
+                }).join('');
+                const isHl = fin === state.financingType && t === state.selectedTenor;
+                return `<tr class="${isHl ? 'highlight' : ''}"><td><strong>${t} Bulan</strong> (${t / 12} Thn)</td>${cells}</tr>`;
+              }).join('');
 
-          return `
-            <div class="modal-section">
-              <div class="modal-section-head">
-                <div>
-                  <h4>Tabel Suku Bunga Flat p.a. (%) — ${fin}</h4>
+              return `
+                <div class="modal-section">
+                  <div class="modal-section-head">
+                    <div><h4>${rt.label} — ${fin}</h4></div>
+                  </div>
+                  <div class="bordered">
+                    <div class="table-wrap">
+                      <table class="table">
+                        <thead><tr><th>Tenor</th>${schemeHeaders}</tr></thead>
+                        <tbody>${rows}</tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div class="bordered">
-                <div class="table-wrap">
-                  <table class="table">
-                    <thead><tr><th>Tenor</th>${schemeHeaders}</tr></thead>
-                    <tbody>${rows}</tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          `;
+              `;
+            })
+            .join('');
         })
         .join('');
 
@@ -642,7 +660,7 @@
         <div class="modal-section-head" style="margin-bottom:16px;">
           <div>
             <h4>Pengaturan Suku Bunga per Skema &amp; Jenis Pembiayaan</h4>
-            <p>Ubah nilai persentase langsung pada tabel di bawah ini</p>
+            <p>Default dari rates.csv. Perubahan di sini hanya tersimpan di browser ini.</p>
           </div>
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
             ${segmentedHtml('segModalFin', filterOpts, finFilter)}
@@ -659,10 +677,11 @@
 
       box.querySelectorAll('.js-rate').forEach((inp) => {
         inp.addEventListener('change', () => {
+          const key = inp.getAttribute('data-rate-key');
           const fin = inp.getAttribute('data-fin');
           const sId = inp.getAttribute('data-scheme');
           const t = parseInt(inp.getAttribute('data-tenor'), 10);
-          state.schemes[sId].interestRates[fin][t] = Math.max(0, parseFloat(inp.value) || 0);
+          state.schemes[sId][key][fin][t] = Math.max(0, parseFloat(inp.value) || 0);
           onSettingsChanged();
         });
       });
@@ -676,7 +695,7 @@
         { key: 'blokir:New Car', label: 'Blokir BPKB — New Car (Rp)', step: 50000 },
         { key: 'blokir:Used Car', label: 'Blokir BPKB — Used Car (Rp)', step: 50000 },
         { key: 'blokir:Refinancing', label: 'Blokir BPKB — Refinancing (Rp)', step: 50000 },
-        { key: 'blokir:Niaga Barang', label: 'Blokir BPKB — Niaga Barang (Rp)', step: 50000 }
+        { key: 'blokir:Mobil Niaga', label: 'Blokir BPKB — Mobil Niaga (Rp)', step: 50000 }
       ];
 
       const getVal = (sch, key) =>
@@ -1184,9 +1203,10 @@
     controls.forEach((control) => { control.disabled = true; });
     const status = $('simulationNotice');
     status.hidden = false;
-    status.textContent = 'Memuat data kendaraan dari vehicles.csv...';
+    status.textContent = 'Memuat data kendaraan & suku bunga (vehicles.csv, rates.csv)...';
     try {
-      await global.KKBVehicles.load();
+      await Promise.all([global.KKBVehicles.load(), global.KKBRates.load()]);
+      state.schemes = cloneDeep(Config.DEFAULT_SCHEMES);
       loadSavedSettings();
       populateStaticDropdowns();
       renderPerilCheckboxes();
@@ -1195,7 +1215,7 @@
       controls.forEach((control) => { control.disabled = false; });
     } catch (error) {
       status.hidden = false;
-      status.textContent = `Data kendaraan gagal dimuat: ${error.message} Jalankan melalui Live Server atau hosting HTTP, lalu periksa vehicles.csv dan muat ulang halaman.`;
+      status.textContent = `Data gagal dimuat: ${error.message} Jalankan melalui Live Server atau hosting HTTP, lalu periksa vehicles.csv / rates.csv dan muat ulang halaman.`;
       document.querySelector('.results').querySelectorAll('section').forEach((section) => { section.hidden = true; });
     }
   }

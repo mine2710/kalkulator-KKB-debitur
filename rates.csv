@@ -1,0 +1,44 @@
+# Suku bunga default BRI KKB (dalam persen p.a.). Edit file ini untuk mengubah bunga semua debitur.
+# jenis_bunga: flat (dipakai menghitung angsuran) atau efektif (dipakai memecah porsi pokok/bunga di jadwal angsuran).
+# Kosongkan karyawan/lnp/regular bila tenor tidak tersedia (contoh: Used Car & Refinancing maks. 48 bulan).
+jenis_bunga,pembiayaan,tenor,karyawan,lnp,regular
+flat,New Car,12,2.18,1.99,3.28
+flat,New Car,24,2.11,2.19,3.35
+flat,New Car,36,2.10,2.18,3.50
+flat,New Car,48,2.36,2.36,3.75
+flat,New Car,60,3.06,3.48,4.35
+flat,Used Car,12,3.50,3.75,4.50
+flat,Used Car,24,3.95,3.95,4.75
+flat,Used Car,36,4.15,4.50,5.50
+flat,Used Car,48,4.50,4.75,5.75
+flat,Used Car,60,,,
+flat,Refinancing,12,3.99,4.15,5.24
+flat,Refinancing,24,4.25,4.75,5.50
+flat,Refinancing,36,4.50,5.00,6.00
+flat,Refinancing,48,4.75,5.40,6.25
+flat,Refinancing,60,,,
+flat,Mobil Niaga,12,4.00,4.50,5.00
+flat,Mobil Niaga,24,4.25,4.75,5.50
+flat,Mobil Niaga,36,4.50,5.00,5.60
+flat,Mobil Niaga,48,4.75,5.25,5.80
+flat,Mobil Niaga,60,5.00,5.50,6.00
+efektif,New Car,12,4.00,3.65,6.00
+efektif,New Car,24,4.00,4.15,6.31
+efektif,New Car,36,4.00,4.15,6.60
+efektif,New Car,48,4.50,4.50,7.03
+efektif,New Car,60,5.75,6.50,8.03
+efektif,Used Car,12,6.40,6.85,8.21
+efektif,Used Car,24,7.41,7.41,8.87
+efektif,Used Car,36,7.78,8.41,10.20
+efektif,Used Car,48,8.36,8.80,10.54
+efektif,Used Car,60,,,
+efektif,Refinancing,12,7.29,7.57,9.54
+efektif,Refinancing,24,7.96,8.87,10.23
+efektif,Refinancing,36,8.41,9.31,11.08
+efektif,Refinancing,48,8.80,9.94,11.40
+efektif,Refinancing,60,,,
+efektif,Mobil Niaga,12,7.30,8.21,9.10
+efektif,Mobil Niaga,24,7.96,8.87,10.23
+efektif,Mobil Niaga,36,8.41,9.31,10.38
+efektif,Mobil Niaga,48,8.80,9.68,10.63
+efektif,Mobil Niaga,60,9.15,10.01,10.85

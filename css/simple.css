@@ -88,8 +88,28 @@ body {
 .scheme-meta { display: none; }
 .scheme-btn:hover { box-shadow: none; background: var(--bri-blue-soft); }
 .scheme-btn.active:hover { background: var(--bri-blue-dark); }
-.workspace { grid-template-columns: minmax(300px, 1fr) minmax(0, 2fr); gap: 24px; }
+.workspace { grid-template-columns: minmax(0, 1fr); gap: 24px; }
 .results { gap: 24px; }
+
+/* Form di atas: kiri Pembiayaan s.d. DP, tengah Asuransi, kanan Biaya Kredit */
+.form-card .form-grid.form-cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  align-items: start;
+}
+.form-cols > .form-col { min-width: 0; padding: 0 28px; }
+.form-cols > .form-col:first-child { padding-left: 0; }
+.form-cols > .form-col:last-child { padding-right: 0; }
+.form-cols > .form-col + .form-col { border-left: 1px solid var(--border); }
+.form-cols .form-col > .form-section + .form-section { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+.form-cols .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+
+/* Ringkasan: tabel tenor & rincian TDP berdampingan di layar lebar */
+.summary-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 1100px) {
+  .summary-split { grid-template-columns: minmax(0, 1fr); }
+}
 .card-header { padding: 20px 24px; border-bottom: 0; }
 .card-body { padding: 0 24px 24px; }
 .card-title { font-weight: 700; font-size: 1rem; }
@@ -136,6 +156,31 @@ body {
   .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
+/* Tablet: Pembiayaan & Asuransi berdampingan, Biaya Kredit di bawah selebar penuh */
+@media (max-width: 1024px) {
+  .form-card .form-grid.form-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-cols > .form-col:nth-child(2) { padding-right: 0; }
+  .form-cols > .form-col:nth-child(3) {
+    grid-column: 1 / -1;
+    padding: 20px 0 0;
+    margin-top: 20px;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 720px) {
+  .form-card .form-grid.form-cols { grid-template-columns: minmax(0, 1fr); }
+  .form-cols > .form-col,
+  .form-cols > .form-col:nth-child(3) { padding: 0; grid-column: auto; }
+  .form-cols > .form-col + .form-col {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+}
+
 @media (max-width: 640px) {
   body { padding: 16px; }
   .navbar { padding: 16px; }
@@ -157,4 +202,5 @@ body {
   .kpi, .kpi.primary, .kpi.accent, .kpi.teal { padding: 16px 18px; }
   .kpi-value { font-size: 1.35rem; margin-top: 4px; }
   .table.stack td { padding: 4px 0; }
+  .form-cols .field-row { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }

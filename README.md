@@ -13,9 +13,9 @@ Aplikasi web interaktif untuk simulasi perhitungan **Kredit Kendaraan Bermotor (
 
 ### 2. Input Utama & Minimum DP
 1. **Skema Pembiayaan:** `Regular`, `LNP`, atau `Karyawan`.
-2. **Jenis Pembiayaan:** `New Car`, `Used Car`, `Refinancing`, atau `Niaga Barang (New Car Commercial)`.
+2. **Jenis Pembiayaan:** `New Car`, `Used Car`, `Refinancing`, atau `Mobil Niaga`.
    - `New Car`, `Used Car`, dan `Refinancing` otomatis dipetakan ke golongan asuransi **Non Bus dan Non Truk**.
-   - `Niaga Barang` otomatis dipetakan ke golongan asuransi **Truk dan Pick Up** dengan tabel bunga komersial tersendiri (Tenor 12–60 bulan untuk Karyawan BRI Group, LNP, dan Regular).
+   - `Mobil Niaga` otomatis dipetakan ke golongan asuransi **Truk dan Pick Up** dengan tabel bunga komersial tersendiri (Tenor 12–60 bulan untuk Karyawan BRI Group, LNP, dan Regular).
 3. **Merk dan Tipe / Model:** dropdown tipe mengikuti merk yang dipilih.
 4. **Minimum DP:** lookup langsung dari pasangan merk + tipe/model pada katalog kendaraan.
    - Tidak dipengaruhi jenis pembiayaan, skema, bahan bakar, kategori, atau depreciation.

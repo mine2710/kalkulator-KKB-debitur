@@ -53,10 +53,10 @@
       description: 'Pembiayaan kembali / multiguna dengan agunan BPKB kendaraan bermotor'
     },
     {
-      value: 'Niaga Barang',
-      label: 'Niaga Barang (New Car Commercial)',
+      value: 'Mobil Niaga',
+      label: 'Mobil Niaga',
       vehicleType: 'Truk dan Pick up',
-      description: 'Pembiayaan kendaraan niaga barang baru (Truk & Pick Up)'
+      description: 'Pembiayaan kendaraan niaga (Truk & Pick Up)'
     }
   ];
 
@@ -64,7 +64,7 @@
     'New Car': 'Non Bus dan Non Truk',
     'Used Car': 'Non Bus dan Non Truk',
     'Refinancing': 'Non Bus dan Non Truk',
-    'Niaga Barang': 'Truk dan Pick up'
+    'Mobil Niaga': 'Truk dan Pick up'
   };
 
   const VEHICLE_TYPES = [
@@ -75,7 +75,7 @@
     },
     {
       value: 'Truk dan Pick up',
-      label: 'Truk dan Pick Up (Niaga Barang)',
+      label: 'Truk dan Pick Up (Mobil Niaga)',
       category: 'commercial'
     }
   ];
@@ -216,8 +216,8 @@
       badge: 'Umum & Wiraswasta',
       tagline: 'Skema standar pembiayaan kendaraan bermotor untuk nasabah umum, profesional, dan pelaku usaha.',
       highlights: [
-        'Suku bunga kompetitif mulai 2,99% flat p.a.',
-        'Tenor fleksibel 12 s.d. 60 bulan (Refinancing maks. 48 bulan)',
+        'Suku bunga kompetitif sesuai rates.csv',
+        'Tenor 12 s.d. 60 bulan (Used Car & Refinancing maks. 48 bulan)',
         'DP minimum 10%-25% sesuai merk dan tipe kendaraan',
         'Provisi standar 1,00% & Admin Rp 2.000.000'
       ],
@@ -228,21 +228,12 @@
         'New Car': 500000,
         'Used Car': 500000,
         'Refinancing': 500000,
-        'Niaga Barang': 500000
+        'Mobil Niaga': 500000
       },
-      tenorsByFinancing: {
-        'New Car': [12, 24, 36, 48, 60],
-        'Used Car': [12, 24, 36, 48, 60],
-        'Refinancing': [12, 24, 36, 48],
-        'Niaga Barang': [12, 24, 36, 48, 60]
-      },
-      // Suku bunga Flat p.a. (%) per Jenis Pembiayaan & Tenor
-      interestRates: {
-        'New Car': { 12: 2.99, 24: 3.45, 36: 3.75, 48: 4.15, 60: 4.55 },
-        'Used Car': { 12: 5.25, 24: 5.75, 36: 6.25, 48: 6.75, 60: 7.25 },
-        'Refinancing': { 12: 6.50, 24: 7.00, 36: 7.50, 48: 8.00, 60: 8.50 },
-        'Niaga Barang': { 12: 9.10, 24: 10.23, 36: 10.38, 48: 10.63, 60: 10.85 }
-      }
+      // interestRates (flat), effectiveRates, dan tenorsByFinancing dimuat dari rates.csv (js/rates.js)
+      interestRates: {},
+      effectiveRates: {},
+      tenorsByFinancing: {}
     },
 
     lnp: {
@@ -251,7 +242,7 @@
       badge: 'Nasabah Prioritas',
       tagline: 'Program eksklusif Layanan Nasabah Prioritas (BRI Prioritas & Private) dengan rate khusus & keringanan biaya.',
       highlights: [
-        'Special rate Prioritas mulai 2,55% flat p.a.',
+        'Special rate Prioritas sesuai rates.csv',
         'Diskon 50% Biaya Provisi (0,50%) & Admin ringan Rp 1.250.000',
         'DP minimum sesuai tabel merk dan tipe kendaraan',
         'Proses persetujuan jalur cepat (Fast Track RM Prioritas)'
@@ -263,20 +254,12 @@
         'New Car': 500000,
         'Used Car': 500000,
         'Refinancing': 500000,
-        'Niaga Barang': 500000
+        'Mobil Niaga': 500000
       },
-      tenorsByFinancing: {
-        'New Car': [12, 24, 36, 48, 60],
-        'Used Car': [12, 24, 36, 48, 60],
-        'Refinancing': [12, 24, 36, 48],
-        'Niaga Barang': [12, 24, 36, 48, 60]
-      },
-      interestRates: {
-        'New Car': { 12: 2.55, 24: 2.88, 36: 3.18, 48: 3.58, 60: 3.98 },
-        'Used Car': { 12: 4.50, 24: 4.95, 36: 5.45, 48: 5.95, 60: 6.45 },
-        'Refinancing': { 12: 5.75, 24: 6.25, 36: 6.75, 48: 7.25, 60: 7.75 },
-        'Niaga Barang': { 12: 8.21, 24: 8.87, 36: 9.31, 48: 9.68, 60: 10.01 }
-      }
+      // interestRates (flat), effectiveRates, dan tenorsByFinancing dimuat dari rates.csv (js/rates.js)
+      interestRates: {},
+      effectiveRates: {},
+      tenorsByFinancing: {}
     },
 
     karyawan: {
@@ -285,10 +268,10 @@
       badge: 'Payroll & Pekerja BRI Group',
       tagline: 'Fasilitas khusus pekerja tetap / Payroll BRI, BUMN, ASN, dan instansi mitra PKS dengan bunga paling ringan.',
       highlights: [
-        'Suku bunga spesial karyawan mulai 2,35% flat p.a.',
+        'Suku bunga spesial karyawan sesuai rates.csv',
         'Keringanan Biaya Admin Rp 1.000.000 & Provisi ringan 0,25%',
         'DP minimum sesuai tabel merk dan tipe kendaraan',
-        'Potong gaji otomatis (Auto-Debet Payroll) s.d. 60 bulan'
+        'Potong gaji otomatis (Auto-Debet Payroll)'
       ],
       defaultAdmin: 1000000,
       defaultProvisiPct: 0.25,
@@ -297,20 +280,12 @@
         'New Car': 500000,
         'Used Car': 500000,
         'Refinancing': 500000,
-        'Niaga Barang': 500000
+        'Mobil Niaga': 500000
       },
-      tenorsByFinancing: {
-        'New Car': [12, 24, 36, 48, 60],
-        'Used Car': [12, 24, 36, 48, 60],
-        'Refinancing': [12, 24, 36, 48, 60],
-        'Niaga Barang': [12, 24, 36, 48, 60]
-      },
-      interestRates: {
-        'New Car': { 12: 2.35, 24: 2.65, 36: 2.95, 48: 3.35, 60: 3.75 },
-        'Used Car': { 12: 4.25, 24: 4.75, 36: 5.25, 48: 5.75, 60: 6.25 },
-        'Refinancing': { 12: 5.50, 24: 6.00, 36: 6.50, 48: 7.00, 60: 7.50 },
-        'Niaga Barang': { 12: 7.30, 24: 7.96, 36: 8.41, 48: 8.80, 60: 9.15 }
-      }
+      // interestRates (flat), effectiveRates, dan tenorsByFinancing dimuat dari rates.csv (js/rates.js)
+      interestRates: {},
+      effectiveRates: {},
+      tenorsByFinancing: {}
     }
   };
 

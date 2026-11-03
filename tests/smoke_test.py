@@ -44,31 +44,55 @@ with sync_playwright() as p:
       const assert = (condition, message) => { if (!condition) throw Error(message); };
       assert(cfg.VEHICLE_TYPES.length === 2, 'only 2 insurance vehicle types active');
       assert(new Set(cfg.INSURANCE_BASE_RATES.map(r => r.type)).size === 2, 'base rates limited to 2 types');
-      const expectedCommercial = {
+      const expectedFlat = {
+        karyawan: {12: 4.00, 24: 4.25, 36: 4.50, 48: 4.75, 60: 5.00},
+        lnp: {12: 4.50, 24: 4.75, 36: 5.00, 48: 5.25, 60: 5.50},
+        regular: {12: 5.00, 24: 5.50, 36: 5.60, 48: 5.80, 60: 6.00}
+      };
+      const expectedEff = {
         karyawan: {12: 7.30, 24: 7.96, 36: 8.41, 48: 8.80, 60: 9.15},
         lnp: {12: 8.21, 24: 8.87, 36: 9.31, 48: 9.68, 60: 10.01},
         regular: {12: 9.10, 24: 10.23, 36: 10.38, 48: 10.63, 60: 10.85}
       };
-      for (const [schId, tenorMap] of Object.entries(expectedCommercial)) {
-        const rates = cfg.DEFAULT_SCHEMES[schId].interestRates['Niaga Barang'];
+      assert(cfg.DEFAULT_SCHEMES.regular.interestRates['New Car'][12] === 3.28, 'New Car regular flat 12');
+      assert(cfg.DEFAULT_SCHEMES.lnp.effectiveRates['Refinancing'][48] === 9.94, 'Refi LNP eff 48');
+      for (const [schId, tenorMap] of Object.entries(expectedFlat)) {
+        const sch = cfg.DEFAULT_SCHEMES[schId];
         for (const [t, rate] of Object.entries(tenorMap)) {
-          assert(rates[t] === rate, `${schId} Niaga Barang tenor ${t}`);
+          assert(sch.interestRates['Mobil Niaga'][t] === rate, `${schId} Mobil Niaga flat ${t}`);
+          assert(sch.effectiveRates['Mobil Niaga'][t] === expectedEff[schId][t], `${schId} Mobil Niaga eff ${t}`);
         }
+        for (const fin of ['Used Car', 'Refinancing']) {
+          assert(JSON.stringify(sch.tenorsByFinancing[fin]) === '[12,24,36,48]', `${schId} ${fin} max 48`);
+        }
+        assert(sch.tenorsByFinancing['New Car'].length === 5, `${schId} New Car 60`);
         assert(cfg.DEFAULT_SCHEMES[schId].defaultPolis === 60000, `${schId} polis 60rb`);
-        for (const fin of ['New Car', 'Used Car', 'Refinancing', 'Niaga Barang']) {
+        for (const fin of ['New Car', 'Used Car', 'Refinancing', 'Mobil Niaga']) {
           assert(cfg.DEFAULT_SCHEMES[schId].defaultBlokirByFinancing[fin] === 500000, `${schId} ${fin} blokir 500rb`);
         }
       }
       // Provisi = Biaya Provisi (%) * Pokok Hutang (bukan Harga Kendaraan)
       const sim = calc.calculateForTenor({
-        schemeId: 'regular', financingType: 'Niaga Barang', wilayah: '2',
+        schemeId: 'regular', financingType: 'Mobil Niaga', wilayah: '2',
         vehiclePrice: 300000000, dpAmount: 60000000, provisiPct: 1.0,
         polisFee: 60000, blokirFee: 500000, tenorMonths: 36
       });
       assert(sim.principalLoan === 240000000, 'principal loan');
       assert(sim.creditFees.provisiAmount === 2400000, 'provisi must be % * Pokok Hutang');
-      assert(sim.flatRatePa === 10.38, 'Niaga Barang 36m regular rate');
-      assert(sim.insurance.yearlyBreakdown[0].baseRatePct === 2.39, 'Niaga Barang maps to Truk dan Pick up');
+      assert(sim.flatRatePa === 5.60, 'Mobil Niaga 36m regular flat rate');
+      assert(sim.effectiveRatePa === 10.38, 'Mobil Niaga 36m regular effective rate');
+      // ADDB: bulan ke-1 seluruhnya porsi pokok tanpa bunga, bulan ke-2 dst ada bunga, lunas di akhir
+      const sched = calc.generateAmortizationSchedule(sim);
+      assert(sched[0].interestPart === 0 && sched[0].principalPart === sim.monthlyInstallment, 'month 1 principal only');
+      assert(sched[1].interestPart > 0, 'month 2 has interest');
+      assert(sched[sched.length - 1].endingBalance === 0, 'loan fully paid');
+      assert(sched.reduce((a, r) => a + r.principalPart, 0) === sim.principalLoan, 'principal sum');
+      assert(sched.every(r => r.installment === sim.monthlyInstallment), 'constant installment');
+      const usedSuite = calc.calculateFullSuite({brandValue: 'TOYOTA', modelValue: 'AVANZA', vehiclePrice: 300000000,
+        dpAmount: 60000000, financingType: 'Used Car', schemeId: 'karyawan', selectedTenor: 60});
+      assert(usedSuite.tenorResults.map(r => r.tenorMonths).join() === '12,24,36,48', 'used car tenors');
+      assert(usedSuite.activeResult.tenorMonths === 48, 'used car falls back to 48');
+      assert(sim.insurance.yearlyBreakdown[0].baseRatePct === 2.39, 'Mobil Niaga maps to Truk dan Pick up');
       // Urutan kolom Rincian TDP: Komponen Biaya | Nominal (Rp) | Keterangan
       const tdpHeaders = Array.from(document.querySelectorAll('#tdpTableBody')[0].closest('table').querySelectorAll('thead th')).map(th => th.textContent.trim());
       assert(tdpHeaders[1] === 'Nominal (Rp)' && tdpHeaders[2] === 'Keterangan', 'Nominal before Keterangan');
@@ -85,7 +109,7 @@ with sync_playwright() as p:
       assert(catalog.find(' toyota ', 'raize\\u00a0').minDpPct === 15, 'normalization');
       for (const row of catalog.vehicles) {
         for (const schemeId of ['regular', 'lnp', 'karyawan']) {
-          for (const financingType of ['New Car', 'Used Car', 'Refinancing', 'Niaga Barang']) {
+          for (const financingType of ['New Car', 'Used Car', 'Refinancing', 'Mobil Niaga']) {
             const params = {brandValue: row.brand, modelValue: row.model, vehiclePrice: 350000000,
               schemeId, financingType, fuelValue: 'ev', vehicleType: 'Truk dan Pick up',
               schemes: {regular: {dpSchemeModifier: -99}}};
@@ -122,9 +146,9 @@ with sync_playwright() as p:
     assert page.locator("#inputDpValue").input_value() == "30"
     assert "20,0%" in page.locator("#dpMinText").inner_text()
     page.select_option("#inputFinancingType", "Refinancing")
-    page.locator('tr[data-tenor="60"]').dispatch_event('click')
+    assert page.locator('tr[data-tenor="60"]').count() == 0
     assert "36 Bln" in page.locator("#kpiTenorLabel").text_content()
-    page.select_option("#inputFinancingType", "Niaga Barang")
+    page.select_option("#inputFinancingType", "Mobil Niaga")
     assert "9,31%" in page.locator("#kpiRateInfo").inner_text()
     page.click('[data-scheme="karyawan"]')
     assert "8,41%" in page.locator("#kpiRateInfo").inner_text()
@@ -145,6 +169,20 @@ with sync_playwright() as p:
         page.click(f'[data-tab="{tab}"]')
         assert page.locator("#refModalContent table").count() > 0
     page.click("#btnCloseRefModal")
+
+    # Layout PC: form di atas (3 kolom sejajar), ringkasan di bawah
+    layout = page.evaluate("""() => {
+      const cols = [...document.querySelectorAll('.form-cols > .form-col')].map(c => c.getBoundingClientRect());
+      return {count: cols.length, tops: cols.map(c => Math.round(c.top)), lefts: cols.map(c => c.left),
+        formBottom: document.querySelector('.form-card').getBoundingClientRect().bottom,
+        kpiTop: document.querySelector('.kpi-grid').getBoundingClientRect().top,
+        asuransiInMiddle: !!cols.length && document.querySelectorAll('.form-cols > .form-col')[1].contains(document.querySelector('#inputCoverage')),
+        biayaRight: document.querySelectorAll('.form-cols > .form-col')[2].contains(document.querySelector('#inputAdminFee'))};
+    }""")
+    assert layout["count"] == 3 and len(set(layout["tops"])) == 1, layout
+    assert layout["lefts"][0] < layout["lefts"][1] < layout["lefts"][2], layout
+    assert layout["formBottom"] <= layout["kpiTop"], layout
+    assert layout["asuransiInMiddle"] and layout["biayaRight"], layout
 
     for width in [1440, 1024, 768, 390, 320]:
         page.set_viewport_size({"width": width, "height": 900})

@@ -6,7 +6,7 @@
  * 3. Biaya Provisi (Rp) = Biaya Provisi (%) * Pokok Hutang (atau Harga Kendaraan)
  * 4. Biaya Fidusia = Lookup tabel Nilai Penjaminan
  * 5. Premi Asuransi = Multi-tahun dengan Rate Dasar + Perluasan Klaim * Nilai Pertanggungan Terdepresiasi
- * 6. Jadwal Amortisasi & Anotasi Bulanan setara KPR (Anuitas Efektif Ekuivalen & Flat Proporsional)
+ * 6. Jadwal Angsuran Bulanan setara KPR (bunga efektif rates.csv, bulan ke-1 tanpa porsi bunga)
  */
 (function (global) {
   'use strict';
@@ -290,12 +290,10 @@
     const dpPct = safePrice > 0 ? (safeDp / safePrice) * 100 : 0;
     const principalLoan = Math.max(0, safePrice - safeDp); // Pokok Hutang Murni
 
-    // Suku bunga flat p.a. untuk skema, jenis pembiayaan, dan tenor
-    const ratesForFinancing =
-      (scheme.interestRates && scheme.interestRates[financingType]) ||
-      Config.DEFAULT_SCHEMES.regular.interestRates['New Car'];
-    const flatRatePa =
-      ratesForFinancing[tenorMonths] !== undefined ? ratesForFinancing[tenorMonths] : 4.0;
+    // Suku bunga flat p.a. (untuk angsuran) dan efektif p.a. (untuk jadwal angsuran) dari rates.csv
+    const flatRates = (scheme.interestRates && scheme.interestRates[financingType]) || {};
+    const effRates = (scheme.effectiveRates && scheme.effectiveRates[financingType]) || {};
+    const flatRatePa = Number(flatRates[tenorMonths]) || 0;
 
     // Bunga & Angsuran per Bulan
     const tenorYears = tenorMonths / 12;
@@ -339,12 +337,11 @@
       creditFees.totalCreditFees +
       firstInstallmentInTdp;
 
-    const effectiveRatePa = solveEffectiveAnnualRate(
-      tenorMonths,
-      monthlyInstallment,
-      principalLoan,
-      false // konversi ekuivalen anuitas standar untuk tabel amortisasi bulanan
-    );
+    // Bunga efektif mengikuti tabel rates.csv; fallback ke konversi ekuivalen bila tidak diisi
+    const effectiveRatePa =
+      effRates[tenorMonths] !== undefined
+        ? Number(effRates[tenorMonths])
+        : solveEffectiveAnnualRate(tenorMonths, monthlyInstallment, principalLoan, false);
 
     const remainingInstallmentsTotal = isADDM
       ? monthlyInstallment * Math.max(0, tenorMonths - 1)
@@ -352,8 +349,7 @@
 
     const grandTotalOutflow = totalDp + remainingInstallmentsTotal;
 
-    const allowedTenors =
-      (scheme.tenorsByFinancing && scheme.tenorsByFinancing[financingType]) || [12, 24, 36, 48, 60];
+    const allowedTenors = getAllowedTenors(scheme, financingType);
     const isAvailable = allowedTenors.indexOf(tenorMonths) !== -1;
 
     return {
@@ -383,13 +379,12 @@
   }
 
   /**
-   * Menghasilkan Jadwal Amortisasi & Anotasi Lengkap Per Bulan (gaya KPR BRI)
-   * Mendukung 2 tampilan:
-   * - 'anuitas' : Porsi bunga menurun & porsi pokok meningkat tiap bulan (seperti KPR)
-   * - 'flat'    : Porsi pokok & bunga tetap tiap bulan (proporsional KKB)
+   * Menghasilkan Jadwal Angsuran Bulanan (gaya KPR BRI) dengan bunga efektif rates.csv:
+   * - Bulan ke-1 : seluruh angsuran menjadi Porsi Pokok (Porsi Bunga = 0)
+   * - Bulan ke-2 dst : Porsi Bunga = Sisa Pokok × bunga efektif / 12, Porsi Pokok = Angsuran − Porsi Bunga
+   * - Bulan terakhir : Porsi Pokok = sisa pokok sehingga pinjaman lunas, angsuran tetap sama
    */
-  function generateAmortizationSchedule(tenorResult, mode) {
-    const scheduleMode = mode === 'flat' ? 'flat' : 'anuitas';
+  function generateAmortizationSchedule(tenorResult) {
     const n = tenorResult.tenorMonths;
     const principal = tenorResult.principalLoan;
     const pmt = tenorResult.monthlyInstallment;
@@ -411,31 +406,19 @@
       let installmentThisMonth = pmt;
 
       if (principal <= 0) {
-        interestPart = 0;
-        principalPart = 0;
         installmentThisMonth = 0;
-      } else if (scheduleMode === 'anuitas' && rMonthly > 0) {
-        interestPart = Math.round(remainingPrincipal * rMonthly);
-        if (m === n) {
-          principalPart = remainingPrincipal;
-          interestPart = Math.max(0, installmentThisMonth - principalPart);
-          installmentThisMonth = principalPart + interestPart;
-        } else {
-          principalPart = Math.max(0, installmentThisMonth - interestPart);
-          if (principalPart > remainingPrincipal) {
-            principalPart = remainingPrincipal;
-          }
-        }
+      } else if (m === 1) {
+        // Bulan pertama langsung masuk Porsi Pokok tanpa Porsi Bunga
+        principalPart = Math.min(pmt, remainingPrincipal);
+        interestPart = installmentThisMonth - principalPart;
+      } else if (m === n) {
+        principalPart = remainingPrincipal;
+        interestPart = Math.max(0, installmentThisMonth - principalPart);
+        installmentThisMonth = principalPart + interestPart;
       } else {
-        // Mode Flat Proporsional
-        if (m === n) {
-          principalPart = remainingPrincipal;
-          interestPart = Math.max(0, tenorResult.totalInterest - cumulativeInterest);
-          installmentThisMonth = principalPart + interestPart;
-        } else {
-          principalPart = Math.round(principal / n);
-          interestPart = Math.max(0, installmentThisMonth - principalPart);
-        }
+        interestPart = Math.round(remainingPrincipal * rMonthly);
+        principalPart = Math.min(remainingPrincipal, Math.max(0, installmentThisMonth - interestPart));
+        interestPart = installmentThisMonth - principalPart;
       }
 
       const beginningBalance = remainingPrincipal;
@@ -521,11 +504,19 @@
     return rows;
   }
 
+  /** Tenor yang tersedia untuk skema & jenis pembiayaan (sesuai isi rates.csv). */
+  function getAllowedTenors(scheme, financingType) {
+    const list = scheme && scheme.tenorsByFinancing && scheme.tenorsByFinancing[financingType];
+    return list && list.length ? list : [12, 24, 36, 48, 60];
+  }
+
   /**
-   * Menghitung semua pilihan Tenor standar (12, 24, 36, 48, 60 bulan) sekaligus
+   * Menghitung semua Tenor yang tersedia (maks. 12-60 bulan) sekaligus
    */
   function calculateFullSuite(baseParams) {
-    const standardTenors = [12, 24, 36, 48, 60];
+    const schemes = baseParams.schemes || Config.DEFAULT_SCHEMES;
+    const scheme = schemes[baseParams.schemeId || 'regular'] || Config.DEFAULT_SCHEMES.regular;
+    const standardTenors = getAllowedTenors(scheme, baseParams.financingType || 'New Car');
     const minDpInfo = calculateMinDP(baseParams);
 
     const tenorResults = standardTenors.map((tenorMonths) =>
@@ -534,7 +525,7 @@
 
     const selectedTenor = baseParams.selectedTenor || 36;
     const activeResult =
-      tenorResults.find((r) => r.tenorMonths === selectedTenor) || tenorResults[2];
+      tenorResults.find((r) => r.tenorMonths === selectedTenor) || tenorResults[tenorResults.length - 1];
 
     return {
       minDpInfo,
@@ -552,6 +543,7 @@
     solveEffectiveAnnualRate,
     calculateForTenor,
     generateAmortizationSchedule,
+    getAllowedTenors,
     calculateFullSuite
   };
 })(window);
