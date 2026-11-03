@@ -348,8 +348,8 @@
     $('kpiMonthlyInstallment').textContent = formatRupiah(active.monthlyInstallment);
     $('kpiRateInfo').textContent =
       active.rateType === 'flat'
-        ? `Bunga Flat ${formatPct(active.flatRatePa)} p.a. (Efektif ${formatPct(active.effectiveRatePa)} p.a.) • ${active.installmentType}`
-        : `Bunga Efektif ${formatPct(active.effectiveRatePa)} p.a. (Flat ${formatPct(active.flatRatePa)} p.a.) • ${active.installmentType}`;
+        ? `Bunga Flat ${formatPct(active.flatRatePa)} p.a. • Skema ${active.installmentType}`
+        : `Bunga Efektif ${formatPct(active.effectiveRatePa)} p.a. • Skema ${active.installmentType}`;
     $('kpiTotalDp').textContent = formatRupiah(active.totalDp);
     $('kpiTdpSub').textContent =
       active.installmentType === 'ADDM'
@@ -378,9 +378,15 @@
 
   function renderTenorTable(tenorResults, selectedTenor) {
     const tbody = $('tenorSummaryBody');
+    const isFlat = state.rateType === 'flat';
+    const rateHeader = isFlat ? 'Suku Bunga Flat' : 'Suku Bunga Efektif';
+    const thRate = $('thTenorRate');
+    if (thRate) thRate.textContent = rateHeader;
+
     tbody.innerHTML = tenorResults
       .map((row) => {
         const isSel = row.tenorMonths === selectedTenor;
+        const shownRate = row.rateType === 'flat' ? row.flatRatePa : row.effectiveRatePa;
         const cls = ['clickable', isSel ? 'selected' : '', !row.isAvailable ? 'unavailable' : '']
           .filter(Boolean)
           .join(' ');
@@ -392,8 +398,7 @@
               ${isSel ? '<span class="tag tag-orange">Dipilih</span>' : ''}
               ${!row.isAvailable ? '<span class="tag tag-gray">Tidak tersedia</span>' : ''}
             </td>
-            <td class="num ${row.rateType === 'flat' ? 'strong text-blue' : 'muted'}" data-label="Bunga Flat">${formatPct(row.flatRatePa)}</td>
-            <td class="num ${row.rateType !== 'flat' ? 'strong text-blue' : 'muted'}" data-label="Bunga Efektif">${formatPct(row.effectiveRatePa)}</td>
+            <td class="num strong text-blue" data-label="${rateHeader}">${formatPct(shownRate)}</td>
             <td class="num strong text-blue" data-label="Angsuran / Bulan">${formatRupiah(row.monthlyInstallment)}</td>
             <td class="num strong text-dark" data-label="Total DP (TDP)">${formatRupiah(row.totalDp)}</td>
           </tr>
