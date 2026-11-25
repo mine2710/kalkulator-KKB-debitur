@@ -15,7 +15,7 @@ Aplikasi web interaktif untuk simulasi perhitungan **Kredit Kendaraan Bermotor (
 1. **Skema Pembiayaan:** `Regular`, `LNP`, atau `Karyawan`.
 2. **Jenis Pembiayaan & Suku Bunga:**
    - Pilihan Pembiayaan: `New Car`, `Used Car` (maks. 48 bulan), `Refinancing` (maks. 48 bulan), atau `Mobil Niaga` (s.d. 60 bulan).
-   - Suku bunga yang **ditampilkan** selalu **Bunga Flat**, sedangkan angsuran & jadwal angsuran **dihitung** dengan rumus anuitas memakai **Bunga Efektif** (seluruh tarif default dimuat dari `rates.csv`).
+   - Suku bunga yang **ditampilkan** selalu **Bunga Flat**, sedangkan angsuran & jadwal angsuran **dihitung** dengan rumus anuitas memakai **Bunga Efektif** (sheet/CSV `rates` cukup berisi **bunga efektif**; bunga flat dihitung otomatis).
    - `New Car`, `Used Car`, dan `Refinancing` otomatis dipetakan ke golongan asuransi **Non Bus dan Non Truk**, sedangkan `Mobil Niaga` ke **Truk dan Pick up**.
 3. **Merk dan Tipe / Model:** dropdown tipe mengikuti merk yang dipilih.
 4. **Minimum DP:** lookup langsung dari pasangan merk + tipe/model pada katalog kendaraan.
@@ -29,7 +29,7 @@ Aplikasi web interaktif untuk simulasi perhitungan **Kredit Kendaraan Bermotor (
 - **Rumus Angsuran & Skema ADDB vs ADDM:**
   - **ADDB (Angsuran Dibayar Di Belakang):** Angsuran pertama dibayar 1 bulan pasca akad sehingga bulan ke-1 sudah memiliki **Porsi Bunga** (dihitung dari sisa pokok dengan bunga efektif).
   - **ADDM (Angsuran Dibayar Di Muka):** Angsuran pertama masuk TDP saat akad sehingga khusus bulan ke-1 **tidak dikenakan bunga** (`Porsi Bunga = Rp 0`, 100% mengurangi Pokok Hutang), dan bunga baru dihitung mulai bulan ke-2.
-  - **Bunga Flat ADDB vs ADDM:** bunga efektif sama untuk keduanya, tetapi bunga flat ADDM lebih rendah. Data suku bunga memiliki kolom `tipe_angsuran` (`ADDB` / `ADDM`); bila flat ADDM tidak diisi, nilainya dihitung dari bunga efektif dengan rumus konversi `((PMT tipe 1 × tenor) − 1) × 12 / tenor`.
+  - **Bunga Flat ADDB vs ADDM:** bunga efektif sama untuk keduanya, tetapi bunga flat ADDM lebih rendah. Bunga flat ADDB dan ADDM **selalu dihitung** dari bunga efektif dengan rumus konversi `((PMT tipe 0/1 × tenor) − 1) × 12 / tenor` (KALKULATOR RATE.xlsx), sehingga baris `flat` di sheet tidak diperlukan dan diabaikan bila ada. Kolom `tipe_angsuran` (`ADDB` / `ADDM`) opsional: ADDM yang tidak diisi memakai bunga efektif ADDB.
 - **Rumus Biaya Kredit:** `Biaya Admin + Biaya Provisi (Rp) + Biaya Polis + Biaya Fidusia + Blokir BPKB`
 - **Rumus Biaya Provisi (Rp):** `Biaya Provisi (%) × Pokok Hutang` *(dapat diubah ke basis Harga Kendaraan melalui menu Pengaturan Rate)*
 - **Rumus Fidusia:** Otomatis mengacu pada tabel rentang Nilai Penjaminan (`s.d. 50 Jt` hingga `> 1 Miliar`).
@@ -74,7 +74,7 @@ Uji browser tersedia di `tests/smoke_test.py` dan dijalankan dengan Python, pake
 kalkulator-KKB-debitur/
 ├── BRI_2025.png        # Logo resmi BRI
 ├── vehicles.csv        # Data dropdown merk-model dan minimum DP yang dapat diedit
-├── rates.csv           # Data default suku bunga Flat & Efektif per pembiayaan dan skema
+├── rates.csv           # Data default suku bunga Efektif per pembiayaan dan skema (flat dihitung otomatis)
 ├── index.html          # Antarmuka utama aplikasi kalkulator KKB BRI
 ├── css/
 │   └── styles.css      # Desain UI tabel responsif menyesuaikan resolusi layar

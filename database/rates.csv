@@ -1,44 +1,4 @@
 jenis_bunga,tipe_angsuran,pembiayaan,tenor,karyawan,lnp,regular
-flat,ADDB,New Car,12,2.18,1.99,3.28
-flat,ADDB,New Car,24,2.11,2.19,3.35
-flat,ADDB,New Car,36,2.10,2.18,3.50
-flat,ADDB,New Car,48,2.36,2.36,3.75
-flat,ADDB,New Car,60,3.06,3.48,4.35
-flat,ADDB,Used Car,12,3.50,3.75,4.50
-flat,ADDB,Used Car,24,3.95,3.95,4.75
-flat,ADDB,Used Car,36,4.15,4.50,5.50
-flat,ADDB,Used Car,48,4.50,4.75,5.75
-flat,ADDB,Used Car,60,,,
-flat,ADDB,Refinancing,12,3.99,4.15,5.24
-flat,ADDB,Refinancing,24,4.25,4.75,5.50
-flat,ADDB,Refinancing,36,4.50,5.00,6.00
-flat,ADDB,Refinancing,48,4.75,5.40,6.25
-flat,ADDB,Refinancing,60,,,
-flat,ADDB,Mobil Niaga,12,4.00,4.50,5.00
-flat,ADDB,Mobil Niaga,24,4.25,4.75,5.50
-flat,ADDB,Mobil Niaga,36,4.50,5.00,5.60
-flat,ADDB,Mobil Niaga,48,4.75,5.25,5.80
-flat,ADDB,Mobil Niaga,60,5.00,5.50,6.00
-flat,ADDM,New Car,12,1.84,1.68,2.77
-flat,ADDM,New Car,24,1.94,2.01,3.07
-flat,ADDM,New Car,36,1.98,2.05,3.30
-flat,ADDM,New Car,48,2.26,2.26,3.58
-flat,ADDM,New Car,60,2.95,3.35,4.19
-flat,ADDM,Used Car,12,2.95,3.16,3.79
-flat,ADDM,Used Car,24,3.62,3.62,4.35
-flat,ADDM,Used Car,36,3.91,4.23,5.17
-flat,ADDM,Used Car,48,4.29,4.53,5.48
-flat,ADDM,Used Car,60,,,
-flat,ADDM,Refinancing,12,3.36,3.49,4.41
-flat,ADDM,Refinancing,24,3.89,4.35,5.03
-flat,ADDM,Refinancing,36,4.23,4.70,5.64
-flat,ADDM,Refinancing,48,4.53,5.15,5.95
-flat,ADDM,Refinancing,60,,,
-flat,ADDM,Mobil Niaga,12,3.37,3.79,4.21
-flat,ADDM,Mobil Niaga,24,3.89,4.35,5.03
-flat,ADDM,Mobil Niaga,36,4.23,4.70,5.27
-flat,ADDM,Mobil Niaga,48,4.53,5.01,5.53
-flat,ADDM,Mobil Niaga,60,4.81,5.29,5.77
 efektif,,New Car,12,4.00,3.65,6.00
 efektif,,New Car,24,4.00,4.15,6.31
 efektif,,New Car,36,4.00,4.15,6.60

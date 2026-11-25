@@ -366,10 +366,14 @@ with sync_playwright() as p:
         {jenis_bunga: 'flat', tipe_angsuran: 'XYZ', pembiayaan: 'New Car', tenor: 12, regular: 9}
       ]);
       if (reg.interestRates['New Car'][12] !== 3.28 || reg.interestRatesAddm['New Car'][12] !== 2.77) throw Error('legacy API ADDM flat');
-      // Baris ADDM yang diisi eksplisit (boleh ditulis M) mengalahkan nilai turunan
-      const typedRows = fins.map(f => `flat,B,${f},12,2.18,1.99,3.28\\nflat,M,${f},12,1.5,1.5,1.5\\nefektif,,${f},12,4.00,3.65,6.00`).join('\\n');
+      // Bunga flat selalu dihitung dari efektif: baris flat yang tidak sinkron (B 9,99 / M 1,5) diabaikan
+      const typedRows = fins.map(f => `flat,B,${f},12,9.99,9.99,9.99\\nflat,M,${f},12,1.5,1.5,1.5\\nefektif,,${f},12,4.00,3.65,6.00`).join('\\n');
       KKBRates.loadText('jenis_bunga,tipe_angsuran,pembiayaan,tenor,karyawan,lnp,regular\\n' + typedRows);
-      if (reg.interestRates['New Car'][12] !== 3.28 || reg.interestRatesAddm['New Car'][12] !== 1.5) throw Error('explicit ADDM flat');
+      if (reg.interestRates['New Car'][12] !== 3.28 || reg.interestRatesAddm['New Car'][12] !== 2.77) throw Error('flat rows must follow efektif');
+      // Sheet cukup berisi baris efektif saja
+      const effOnly = fins.map(f => `efektif,,${f},12,4.00,3.65,6.00`).join('\\n');
+      KKBRates.loadText('jenis_bunga,tipe_angsuran,pembiayaan,tenor,karyawan,lnp,regular\\n' + effOnly);
+      if (reg.interestRates['New Car'][12] !== 3.28 || reg.interestRatesAddm['New Car'][12] !== 2.77 || reg.tenorsByFinancing['New Car'].join() !== '12') throw Error('efektif-only rates');
       let badType = false;
       try { KKBRates.loadText('jenis_bunga,tipe_angsuran,pembiayaan,tenor,karyawan,lnp,regular\\nflat,XYZ,New Car,12,1,1,1'); } catch { badType = true; }
       if (!badType) throw Error('Invalid tipe_angsuran accepted');

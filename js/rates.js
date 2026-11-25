@@ -1,4 +1,4 @@
-/* Memuat suku bunga default (flat & efektif, ADDB & ADDM) dari tab/CSV rates ke KKBConfig.DEFAULT_SCHEMES. */
+/* Memuat suku bunga efektif (ADDB & ADDM) dari tab/CSV rates ke KKBConfig.DEFAULT_SCHEMES; bunga flat dihitung dari efektif. */
 (function (global) {
   'use strict';
 
@@ -79,16 +79,21 @@
       const addb = table[s].ADDB;
       const addm = table[s].ADDM;
 
-      // ADDM yang tidak diisi: bunga efektif sama dengan ADDB (Table Angsuran.xlsx), sedangkan
-      // bunga flat dihitung dari bunga efektif dengan rumus konversi tipe M (KALKULATOR RATE.xlsx).
+      // Bunga efektif adalah satu-satunya sumber data. ADDM yang tidak diisi memakai bunga efektif
+      // ADDB (Table Angsuran.xlsx). Bunga flat SELALU dihitung dari bunga efektif dengan rumus
+      // "EFEKTIF KE FLAT" tipe B / M (KALKULATOR RATE.xlsx), jadi baris flat di sheet tidak perlu ada.
+      // Baris flat lama hanya dipakai bila tenor tersebut tidak punya bunga efektif sama sekali.
       financingValues.forEach((fin) => {
         VALID_TENORS.forEach((t) => {
           if (addm.effectiveRates[fin][t] === undefined && addb.effectiveRates[fin][t] !== undefined) {
             addm.effectiveRates[fin][t] = addb.effectiveRates[fin][t];
           }
-          if (addm.interestRates[fin][t] === undefined && addm.effectiveRates[fin][t] !== undefined) {
-            addm.interestRates[fin][t] = Number(effectiveToFlat(addm.effectiveRates[fin][t], t, true).toFixed(2));
-          }
+          [[addb, false], [addm, true]].forEach(([tbl, isADDM]) => {
+            const eff = tbl.effectiveRates[fin][t];
+            if (eff !== undefined) {
+              tbl.interestRates[fin][t] = Number(effectiveToFlat(eff, t, isADDM).toFixed(2));
+            }
+          });
         });
       });
 
@@ -98,12 +103,10 @@
       scheme.effectiveRatesAddm = addm.effectiveRates;
       scheme.tenorsByFinancing = {};
       financingValues.forEach((fin) => {
-        const hasFlat = (t) => addb.interestRates[fin][t] !== undefined;
-        const hasEff = (t) => addb.effectiveRates[fin][t] !== undefined;
-        // CSV: tenor tersedia bila punya bunga flat DAN efektif. API: cukup salah satunya.
-        const tenors = VALID_TENORS.filter((t) => (strict ? hasFlat(t) && hasEff(t) : hasFlat(t) || hasEff(t)));
+        // Tenor tersedia bila punya bunga efektif (atau baris flat lama sebagai cadangan).
+        const tenors = VALID_TENORS.filter((t) => addb.interestRates[fin][t] !== undefined);
         if (!tenors.length && strict) {
-          throw new Error(`rates.csv: ${fin} (${s}) belum memiliki bunga flat & efektif.`);
+          throw new Error(`rates.csv: ${fin} (${s}) belum memiliki bunga efektif.`);
         }
         scheme.tenorsByFinancing[fin] = tenors.length ? tenors : VALID_TENORS.slice();
       });
