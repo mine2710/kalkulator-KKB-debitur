@@ -6,7 +6,8 @@
  * 3. Biaya Provisi (Rp) = Biaya Provisi (%) * Pokok Hutang (atau Harga Kendaraan)
  * 4. Biaya Fidusia = Lookup tabel Nilai Penjaminan
  * 5. Premi Asuransi = Multi-tahun dengan Rate Dasar + Perluasan Klaim * Nilai Pertanggungan Terdepresiasi
- * 6. Jadwal Angsuran Bulanan (pilihan Bunga Efektif / Flat; khusus ADDM bulan ke-1 tanpa porsi bunga)
+ * 6. Jadwal Angsuran Bulanan (aplikasi selalu memakai rumus anuitas + Bunga Efektif, yang ditampilkan
+ *    Bunga Flat; khusus ADDM bulan ke-1 tanpa porsi bunga)
  */
 (function (global) {
   'use strict';
@@ -114,26 +115,29 @@
       const baseRatePct = yearCoverageType === 'All Risk' ? rateRow.allRisk : rateRow.tlo;
 
       let perilRatePct = 0;
+      let perilFixedAmount = 0;
       const activePerils = [];
 
       selectedPerils.forEach((perilId) => {
         const perilDef = Config.INSURANCE_PERILS.find((p) => p.id === perilId);
         if (perilDef && perilDef.rates[yearCoverageType]) {
           const r = perilDef.rates[yearCoverageType][String(wilayah)] || 0;
-          perilRatePct += r;
+          if (perilDef.fixed) perilFixedAmount += r;
+          else perilRatePct += r;
           activePerils.push({
             id: perilDef.id,
             label: perilDef.label,
             code: `${perilDef.codePrefix}${wilayah}${yearCoverageType}`,
-            ratePct: r,
-            amount: Math.round((insuredValue * r) / 100)
+            fixed: !!perilDef.fixed,
+            ratePct: perilDef.fixed ? 0 : r,
+            amount: perilDef.fixed ? r : Math.round((insuredValue * r) / 100)
           });
         }
       });
 
       const combinedRatePct = baseRatePct + perilRatePct;
       const basePremium = Math.round((insuredValue * baseRatePct) / 100);
-      const perilPremium = Math.round((insuredValue * perilRatePct) / 100);
+      const perilPremium = Math.round((insuredValue * perilRatePct) / 100) + perilFixedAmount;
       const yearTotalPremium = basePremium + perilPremium;
 
       totalBasePremium += basePremium;
@@ -148,6 +152,7 @@
         coverageType: yearCoverageType,
         baseRatePct,
         perilRatePct,
+        perilFixedAmount,
         combinedRatePct,
         basePremium,
         perilPremium,
@@ -291,11 +296,19 @@
     const dpPct = safePrice > 0 ? (safeDp / safePrice) * 100 : 0;
     const principalLoan = Math.max(0, safePrice - safeDp); // Pokok Hutang Murni
 
-    // Suku bunga flat p.a. dan efektif p.a. dari rates.csv
-    const flatRates = (scheme.interestRates && scheme.interestRates[financingType]) || {};
-    const effRates = (scheme.effectiveRates && scheme.effectiveRates[financingType]) || {};
-    const flatRatePa = Number(flatRates[tenorMonths]) || 0;
+    // Suku bunga flat p.a. dan efektif p.a. dari rates.csv. ADDM memakai tabelnya sendiri
+    // (bunga flat ADDM lebih rendah daripada ADDB untuk bunga efektif yang sama).
     const isADDM = installmentType === 'ADDM';
+    const flatRates = getRateTable(scheme, 'interestRates', financingType, isADDM);
+    const effRates = getRateTable(scheme, 'effectiveRates', financingType, isADDM);
+    // Bunga flat adalah yang ditampilkan ke debitur. Bila tabel flat kosong untuk tenor ini,
+    // nilainya diturunkan dari bunga efektif (konversi "EFEKTIF KE FLAT").
+    let flatRatePa = Number(flatRates[tenorMonths]) || 0;
+    if (flatRates[tenorMonths] === undefined && effRates[tenorMonths] !== undefined && global.KKBRates) {
+      flatRatePa = Number(
+        global.KKBRates.effectiveToFlat(Number(effRates[tenorMonths]), tenorMonths, isADDM).toFixed(2)
+      );
+    }
     const activeRateType = rateType === 'flat' ? 'flat' : 'efektif';
 
     // Hitung bunga efektif terlebih dahulu (dari rates.csv, atau ekuivalen flat bila tidak tersedia)
@@ -368,6 +381,9 @@
       creditFees.totalCreditFees +
       firstInstallmentInTdp;
 
+    // Biaya awal tanpa DP (dipakai Refinancing, yang tidak memiliki DP)
+    const totalUpfrontFees = totalDp - Math.round(safeDp);
+
     const remainingInstallmentsTotal = isADDM
       ? monthlyInstallment * Math.max(0, tenorMonths - 1)
       : monthlyInstallment * tenorMonths;
@@ -400,6 +416,7 @@
       insurance,
       creditFees,
       totalDp,
+      totalUpfrontFees,
       grandTotalOutflow
     };
   }
@@ -539,6 +556,17 @@
     return rows;
   }
 
+  /**
+   * Tabel bunga per tenor untuk skema & jenis pembiayaan. rateKey: 'interestRates' (flat) atau
+   * 'effectiveRates'. Untuk ADDM, tenor yang tidak punya nilai khusus ADDM memakai nilai ADDB.
+   */
+  function getRateTable(scheme, rateKey, financingType, isADDM) {
+    const base = (scheme && scheme[rateKey] && scheme[rateKey][financingType]) || {};
+    if (!isADDM) return base;
+    const addm = (scheme && scheme[rateKey + 'Addm'] && scheme[rateKey + 'Addm'][financingType]) || {};
+    return Object.assign({}, base, addm);
+  }
+
   /** Tenor yang tersedia untuk skema & jenis pembiayaan (sesuai isi rates.csv). */
   function getAllowedTenors(scheme, financingType) {
     const list = scheme && scheme.tenorsByFinancing && scheme.tenorsByFinancing[financingType];
@@ -578,6 +606,7 @@
     solveEffectiveAnnualRate,
     calculateForTenor,
     generateAmortizationSchedule,
+    getRateTable,
     getAllowedTenors,
     calculateFullSuite
   };

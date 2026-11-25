@@ -11,12 +11,45 @@
     modelsFor: (brand) => api.vehicles.filter((row) => normalize(row.brand) === normalize(brand)),
     find: (brand, model) => unique.get(`${normalize(brand)}|${normalize(model)}`),
     loadText,
+    loadJson,
     async load() {
-      const response = await fetch('vehicles.csv', { cache: 'no-store' });
+      let response = await fetch('vehicles.csv', { cache: 'no-store' }).catch(() => null);
+      if (!response || !response.ok) {
+        response = await fetch('database/vehicles.csv', { cache: 'no-store' });
+      }
       if (!response.ok) throw new Error(`vehicles.csv: HTTP ${response.status}`);
       loadText(await response.text());
     }
   };
+
+  function loadJson(items) {
+    if (!Array.isArray(items) || !items.length) {
+      throw new Error('Data kendaraan API tidak boleh kosong.');
+    }
+    const next = new Map();
+    items.forEach((item, index) => {
+      const brand = normalize(item.brand);
+      const model = item.model !== undefined && item.model !== null ? String(item.model).trim() : '';
+      const dp = String(item.min_dp_pct !== undefined ? item.min_dp_pct : '').replace(',', '.');
+      const minDpPct = Number(dp);
+      if (!brand || !model || !Number.isFinite(minDpPct) || minDpPct < 0 || minDpPct > 100) {
+        return;
+      }
+      const key = `${brand}|${normalize(model)}`;
+      const vehicle = {
+        brand,
+        model,
+        category: item.category || '',
+        depreciation: item.depreciation || '',
+        minDpPct
+      };
+      if (!next.has(key) || minDpPct < next.get(key).minDpPct) next.set(key, vehicle);
+    });
+    if (!next.size) throw new Error('Data kendaraan valid tidak ditemukan.');
+    unique = next;
+    api.vehicles = [...next.values()];
+    api.brands = [...new Set(api.vehicles.map((vehicle) => vehicle.brand))].sort();
+  }
 
   function loadText(text) {
     const rows = global.KKBCsv.parse(text);

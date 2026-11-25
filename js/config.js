@@ -160,7 +160,18 @@
   ];
 
   // Tabel Syarat Klaim / Perluasan Jaminan Asuransi (dalam persen)
+  // Item dengan `fixed: true` bernilai nominal Rupiah per tahun polis (bukan persen).
   const INSURANCE_PERILS = [
+    {
+      id: 'tjh',
+      label: 'TJH Pihak Ke-3 10JT',
+      codePrefix: 'Asrs. TJH',
+      fixed: true,
+      rates: {
+        'All Risk': { '1': 100000, '2': 100000, '3': 100000 },
+        'TLO': { '1': 100000, '2': 100000, '3': 100000 }
+      }
+    },
     {
       id: 'banjir',
       label: 'Banjir, Angin Topan & Badai',
@@ -289,7 +300,129 @@
     }
   };
 
+  function updateFromApi(data) {
+    if (!data) return;
+
+    // 1. Biaya Default Skema (Fees)
+    if (Array.isArray(data.fees) && data.fees.length) {
+      data.fees.forEach((f) => {
+        const sId = String(f.scheme_id || '').trim().toLowerCase();
+        if (DEFAULT_SCHEMES[sId]) {
+          if (f.default_admin !== undefined && f.default_admin !== '') {
+            DEFAULT_SCHEMES[sId].defaultAdmin = Number(f.default_admin);
+          }
+          if (f.default_provisi_pct !== undefined && f.default_provisi_pct !== '') {
+            DEFAULT_SCHEMES[sId].defaultProvisiPct = Number(f.default_provisi_pct);
+          }
+          if (f.default_polis !== undefined && f.default_polis !== '') {
+            DEFAULT_SCHEMES[sId].defaultPolis = Number(f.default_polis);
+          }
+          if (f.default_blokir !== undefined && f.default_blokir !== '') {
+            const b = Number(f.default_blokir);
+            Object.keys(DEFAULT_SCHEMES[sId].defaultBlokirByFinancing).forEach((k) => {
+              DEFAULT_SCHEMES[sId].defaultBlokirByFinancing[k] = b;
+            });
+          }
+        }
+      });
+    }
+
+    // 2. Biaya Fidusia
+    if (Array.isArray(data.fidusia) && data.fidusia.length) {
+      FIDUSIA_TABLE.length = 0;
+      data.fidusia.forEach((row) => {
+        const from = Number(row.from) || 0;
+        const to =
+          row.to === '' || row.to === null || row.to === undefined
+            ? Infinity
+            : Number(row.to);
+        const fee = Number(row.fee) || 0;
+        const label =
+          row.label ||
+          (to === Infinity
+            ? `> Rp ${from.toLocaleString('id-ID')}`
+            : `Rp ${from.toLocaleString('id-ID')} – Rp ${to.toLocaleString('id-ID')}`);
+        FIDUSIA_TABLE.push({ from, to, fee, label });
+      });
+    }
+
+    // 3. Rate Dasar Asuransi OJK
+    if (Array.isArray(data.insurance_base) && data.insurance_base.length) {
+      INSURANCE_BASE_RATES.length = 0;
+      data.insurance_base.forEach((row) => {
+        INSURANCE_BASE_RATES.push({
+          type: String(row.type || 'Non Bus dan Non Truk').trim(),
+          wilayah: String(row.wilayah || '1').trim(),
+          from: Number(row.from) || 0,
+          to: Number(row.to) || 20000000000,
+          tlo: Number(String(row.tlo).replace(',', '.')),
+          allRisk: Number(String(row.all_risk || row.allRisk).replace(',', '.'))
+        });
+      });
+    }
+
+    // 4. Perluasan Klaim Asuransi
+    if (Array.isArray(data.insurance_perils) && data.insurance_perils.length) {
+      data.insurance_perils.forEach((row) => {
+        const p = INSURANCE_PERILS.find(
+          (item) => item.id === String(row.id).trim().toLowerCase()
+        );
+        const cov = String(row.coverage || '').trim();
+        if (p && cov && p.rates[cov]) {
+          ['1', '2', '3'].forEach((w) => {
+            const raw = row['wilayah_' + w];
+            if (raw === undefined || raw === null || String(raw).trim() === '') return;
+            // Nominal Rupiah (fixed) boleh ditulis "100.000" / "100,000"; persen pakai titik desimal
+            const num = p.fixed
+              ? Number(String(raw).replace(/[^0-9]/g, ''))
+              : Number(String(raw).replace(',', '.'));
+            if (!isNaN(num)) p.rates[cov][w] = num;
+          });
+        }
+      });
+    }
+
+    // 5. Depresiasi per Tahun
+    if (Array.isArray(data.depreciation) && data.depreciation.length) {
+      data.depreciation.forEach((row) => {
+        const y = Number(row.year);
+        if (DEPRECIATION_BY_YEAR[y] && row.rate_pct !== undefined && row.rate_pct !== '') {
+          DEPRECIATION_BY_YEAR[y].ratePct = Number(row.rate_pct);
+        }
+      });
+    }
+  }
+
+  // Kredensial API terenkripsi/ter-obfuscate (tidak tampil sebagai URL/token polos di source code)
+  const _O_URL = 'Mi4uKilgdXUpOSgzKi50PTU1PTY/dDk1N3U3OzkoNSl1KXUbETwjOTgja2sVETYPAh4qIxY9KwIrPQkxajMNaGxsBSw1Nx5obBYXKzczbzAoA20zOTszNhcCHxQpGQAgEAkDay0CLTc0ajB1PyI/OQ==';
+  const _O_TOK = 'GAgTBRERGAUJHxkPCB8FDhURHxQFaGpobAUiIyBjYw==';
+  const _K = 0x5a;
+
+  function _decrypt(enc, k) {
+    try {
+      const raw = atob(enc);
+      let out = '';
+      for (let i = 0; i < raw.length; i++) {
+        out += String.fromCharCode(raw.charCodeAt(i) ^ k);
+      }
+      return out;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function getApiEndpoint() {
+    return _decrypt(_O_URL, _K);
+  }
+
+  function getApiToken() {
+    return _decrypt(_O_TOK, _K);
+  }
+
   global.KKBConfig = {
+    getApiEndpoint,
+    getApiToken,
+    updateFromApi,
     WILAYAH_OPTIONS,
     FINANCING_TYPES,
     VEHICLE_TYPE_BY_FINANCING,

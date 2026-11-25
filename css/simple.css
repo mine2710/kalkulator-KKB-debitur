@@ -150,7 +150,6 @@ body {
 .form-cols .dp-status { background: #ffffff; border: 1px solid #cfe2f5; margin-top: 8px; }
 .form-cols .field { margin-bottom: 14px; }
 .form-cols .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.form-cols .field-row-pembiayaan { grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.92fr); }
 .form-cols .field-bottom { margin-top: auto; margin-bottom: 0; }
 .form-cols .chips { margin-top: 8px; gap: 6px; }
 .form-cols .chip { background: #ffffff; padding: 4px 9px; font-size: 0.7rem; }
@@ -216,7 +215,6 @@ body {
   .form-card .form-grid.form-cols { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .form-cols > .form-col,
   .form-cols > .form-col:nth-child(3) { padding: 16px; grid-column: auto; }
-  .form-cols .field-row-pembiayaan { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {

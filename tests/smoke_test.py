@@ -11,7 +11,7 @@ server = ThreadingHTTPServer(('127.0.0.1', 0), partial(SimpleHTTPRequestHandler,
 Thread(target=server.serve_forever, daemon=True).start()
 atexit.register(server.server_close)
 atexit.register(server.shutdown)
-URL = f'http://127.0.0.1:{server.server_port}/index.html'
+URL = f'http://127.0.0.1:{server.server_port}/index.html?source=csv'
 
 with sync_playwright() as p:
     browser = p.chromium.launch(channel="msedge", headless=True, args=["--no-sandbox"])
@@ -122,6 +122,42 @@ with sync_playwright() as p:
       assert(schedFlatAddm[0].interestPart === 0 && schedFlatAddm[0].principalPart === simFlatAddm.monthlyInstallment, 'Flat ADDM month 1 no interest');
       assert(schedFlatAddm[1].interestPart > 0 && schedFlatAddm[1].interestPart === schedFlatAddm[2].interestPart, 'Flat ADDM month 2+ constant interest');
       assert(schedFlatAddm[schedFlatAddm.length - 1].endingBalance === 0, 'Flat ADDM fully paid');
+
+      // Bunga flat ADDM punya tabel sendiri (lebih rendah dari ADDB), bunga efektif sama untuk keduanya
+      const reg = cfg.DEFAULT_SCHEMES.regular;
+      assert(reg.interestRates['New Car'][12] === 3.28 && reg.interestRatesAddm['New Car'][12] === 2.77, 'flat ADDB vs ADDM New Car 12');
+      assert(reg.effectiveRatesAddm['New Car'][12] === 6.00, 'efektif ADDM = efektif ADDB');
+      assert(reg.interestRatesAddm['Used Car'][60] === undefined, 'Used Car 60 tetap tidak tersedia');
+      assert(simFlatAddb.flatRatePa === 5.60 && simFlatAddm.flatRatePa === 5.27, 'Mobil Niaga 36 flat ADDB 5,60 vs ADDM 5,27');
+      assert(simFlatAddm.monthlyInstallment < simFlatAddb.monthlyInstallment, 'flat ADDM installment lower than ADDB');
+      assert(Math.abs(simFlatAddm.monthlyInstallment - simAddm.monthlyInstallment) / simAddm.monthlyInstallment < 0.0005, 'flat ADDM setara efektif ADDM');
+      assert(Math.abs(simFlatAddb.monthlyInstallment - sim.monthlyInstallment) / sim.monthlyInstallment < 0.0005, 'flat ADDB setara efektif ADDB');
+
+      // Rumus konversi EFEKTIF KE FLAT harus sama dengan KALKULATOR RATE.xlsx (sheet Konversi)
+      const near = (a, b, tol) => Math.abs(a - b) <= tol;
+      assert(near(KKBRates.effectiveToFlat(3.31, 12, false), 1.8019706991106332, 1e-9), 'Konversi E13 (tipe B)');
+      assert(near(KKBRates.effectiveToFlat(7.25, 60, true), 3.75968552318338, 1e-9), 'Konversi (2) E18 (tipe M)');
+
+      // Table Angsuran.xlsx: PH 150 juta, bunga efektif 6%, tenor 60 bulan
+      const refSchemes = {regular: {name: 'Ref', interestRates: {}, effectiveRates: {'New Car': {60: 6}}, tenorsByFinancing: {'New Car': [60]}}};
+      const refParams = {schemeId: 'regular', financingType: 'New Car', vehiclePrice: 150000000, dpAmount: 0,
+        tenorMonths: 60, rateType: 'efektif', schemes: refSchemes};
+      const refAddm = calc.calculateForTenor(Object.assign({installmentType: 'ADDM'}, refParams));
+      const refAddb = calc.calculateForTenor(Object.assign({installmentType: 'ADDB'}, refParams));
+      assert(refAddm.monthlyInstallment === 2885493, 'Table Angsuran ADDM installment (B8)');
+      assert(refAddb.monthlyInstallment === 2899920, 'Table Angsuran ADDB installment (H8)');
+      // Tabel flat kosong: bunga flat yang ditampilkan diturunkan dari bunga efektif
+      assert(refAddb.flatRatePa === 3.20, 'flat ADDB turunan dari efektif 6% / 60 bln: ' + refAddb.flatRatePa);
+      assert(refAddm.flatRatePa > 0 && refAddm.flatRatePa < refAddb.flatRatePa, 'flat ADDM turunan lebih rendah dari ADDB');
+      const refSchedAddm = calc.generateAmortizationSchedule(refAddm);
+      const refSchedAddb = calc.generateAmortizationSchedule(refAddb);
+      assert(refSchedAddm[0].interestPart === 0 && refSchedAddm[1].interestPart === 735573, 'Table Angsuran ADDM interest (C8, C9)');
+      assert(refSchedAddb[0].interestPart === 750000 && refSchedAddb[1].interestPart === 739250, 'Table Angsuran ADDB interest (I8, I9)');
+      const sumInterest = (rows) => rows.reduce((a, r) => a + r.interestPart, 0);
+      assert(near(sumInterest(refSchedAddm), 23129565.94, 60), 'Table Angsuran ADDM total interest (E1)');
+      assert(near(sumInterest(refSchedAddb), 23995213.76, 60), 'Table Angsuran ADDB total interest (K1)');
+      assert(refSchedAddm[59].endingBalance === 0 && refSchedAddb[59].endingBalance === 0, 'Table Angsuran lunas');
+
       const usedSuite = calc.calculateFullSuite({brandValue: 'TOYOTA', modelValue: 'AVANZA', vehiclePrice: 300000000,
         dpAmount: 60000000, financingType: 'Used Car', schemeId: 'karyawan', selectedTenor: 60});
       assert(usedSuite.tenorResults.map(r => r.tenorMonths).join() === '12,24,36,48', 'used car tenors');
@@ -182,24 +218,82 @@ with sync_playwright() as p:
     page.select_option("#inputFinancingType", "Refinancing")
     assert page.locator('tr[data-tenor="60"]').count() == 0
     assert "36 Bln" in page.locator("#kpiTenorLabel").text_content()
+    # Refinancing tidak memakai istilah DP: kolom DP menjadi Plafon Pinjaman, TDP menjadi Total Biaya Awal
+    assert page.locator("#labelDpValue").inner_text() == "Plafon Pinjaman"
+    assert page.locator("#labelVehiclePrice").inner_text() == "Nilai Kendaraan (Harga Pasar)"
+    assert page.locator("#sectionFinancingTitle").inner_text() == "Pembiayaan & Plafon Pinjaman"
+    assert page.locator("#inputDpValue").input_value() == "70"
+    assert "Rp 245.000.000" in page.locator("#dpConvertedCaption").inner_text()
+    assert "Maksimal plafon 80,0%" in page.locator("#dpMinText").inner_text()
+    assert page.locator("#kpiUpfrontLabel").inner_text() == "Total Biaya Awal"
+    assert page.locator("#kpiPrincipalLabel").inner_text() == "Plafon Pinjaman"
+    assert page.locator("#kpiPrincipalLoan").inner_text() == "Rp 245.000.000"
+    assert page.locator("#thTenorUpfront").inner_text() == "Total Biaya Awal"
+    assert page.locator("#detailTitleText").inner_text() == "Rincian Biaya Awal"
+    refi_text = page.locator(".workspace").inner_text()
+    assert "DP" not in refi_text and "Down Payment" not in refi_text, "Refinancing must not mention DP"
+    page.select_option("#inputInstallmentType", "ADDM")
+    refi_text = page.locator(".workspace").inner_text()
+    assert "DP" not in refi_text and "Angsuran ke-1 dibayar di muka" in refi_text, "Refinancing ADDM wording"
+    assert "Biaya Awal = Premi Asuransi + Biaya Kredit + Angsuran Ke-1" in refi_text
+    page.select_option("#inputInstallmentType", "ADDB")
+    refi = page.evaluate("""() => {
+      const params = {brandValue: 'SUZUKI', modelValue: 'KARIMUN', vehiclePrice: 350000000, dpAmount: 105000000,
+        financingType: 'Refinancing', schemeId: 'lnp', selectedTenor: 36, coverageValue: 'Kombinasi#1',
+        selectedPerils: ['banjir'], adminFee: 1250000, provisiPct: 0.5, polisFee: 60000, blokirFee: 500000};
+      const r = KKBCalculator.calculateFullSuite(params).activeResult;
+      return {fees: r.totalUpfrontFees, expected: r.insurance.totalPremium + r.creditFees.totalCreditFees, tdp: r.totalDp};
+    }""")
+    assert refi["fees"] == refi["expected"] == refi["tdp"] - 105000000, refi
+    assert page.locator("#kpiTotalDp").inner_text() == "Rp " + f"{refi['fees']:,}".replace(",", ".")
+    assert page.locator("#tdpTableFoot").inner_text().startswith("TOTAL BIAYA AWAL")
+    assert page.locator("#tdpTableBody tr").first.inner_text().startswith("1. Total Premi Asuransi")
+    page.fill("#inputDpValue", "90")
+    assert page.locator("#simulationNotice").is_visible()
+    assert "Plafon" in page.locator("#simulationNotice").inner_text()
+    assert "Di atas maksimal plafon 80,0%" in page.locator("#dpMinText").inner_text()
+    assert page.locator("#btnApplyMinDp").inner_text() == "Pakai Maks"
+    page.click("#btnApplyMinDp")
+    assert page.locator("#inputDpValue").input_value() == "80"
+    assert page.locator("#simulationNotice").is_hidden()
+    page.click("#btnDpModeRp")
+    assert page.locator("#inputDpValue").input_value() == "280.000.000"
+    page.fill("#inputDpValue", "245000000")
+    assert page.locator("#kpiPrincipalLoan").inner_text() == "Rp 245.000.000"
+    page.click("#btnDpModePct")
+    assert page.locator("#inputDpValue").input_value() == "70"
     page.select_option("#inputFinancingType", "Mobil Niaga")
-    assert "9,31%" in page.locator("#kpiRateInfo").inner_text()
+    assert page.locator("#labelDpValue").inner_text() == "Down Payment (DP Murni)"
+    assert page.locator("#kpiUpfrontLabel").inner_text() == "Total Down Payment (TDP)"
+    assert page.locator("#inputDpValue").input_value() == "30"
+    assert page.locator("#tdpTableBody tr").first.inner_text().startswith("1. Down Payment")
+    # Yang ditampilkan selalu Bunga Flat, sedangkan angsuran dihitung dengan rumus anuitas + bunga efektif
+    assert page.locator("#inputRateType").count() == 0
+    assert page.locator("#thTenorRate").inner_text() == "Suku Bunga Flat"
+    assert "Bunga Flat 5,00%" in page.locator("#kpiRateInfo").inner_text()
     page.click('[data-scheme="karyawan"]')
-    assert "8,41%" in page.locator("#kpiRateInfo").inner_text()
+    assert "Bunga Flat 4,50%" in page.locator("#kpiRateInfo").inner_text()
+    assert "Bunga Flat 4,50%" in page.locator("#amortSubtitleInfo").inner_text()
+    assert "Efektif" not in page.locator(".workspace").inner_text()
+    assert "bunga mulai 4,00%" in page.locator("#metaKaryawan").inner_text()
     assert "Pokok Hutang" in page.locator("#provisiRpCaption").text_content()
-    # Uji interaksi dropdown Jenis Suku Bunga (Efektif vs Flat) & Skema Angsuran (ADDB vs ADDM)
-    assert page.locator("#inputRateType").input_value() == "efektif"
+    shown = page.evaluate("""() => {
+      const p = {schemeId: 'karyawan', financingType: 'Mobil Niaga', vehiclePrice: 350000000, dpAmount: 105000000, tenorMonths: 36};
+      const eff = KKBCalculator.calculateForTenor(Object.assign({rateType: 'efektif'}, p));
+      const sched = KKBCalculator.generateAmortizationSchedule(eff);
+      return {installment: eff.monthlyInstallment, eff: eff.effectiveRatePa, flat: eff.flatRatePa,
+        declining: sched[1].interestPart < sched[0].interestPart};
+    }""")
+    assert shown["eff"] == 8.41 and shown["flat"] == 4.5 and shown["declining"], shown
+    assert page.locator("#kpiMonthlyInstallment").inner_text() == "Rp " + f"{shown['installment']:,}".replace(",", ".")
+    # Skema Angsuran (ADDB vs ADDM): porsi bunga bulan ke-1 & bunga flat yang ditampilkan
     assert page.locator("#amortizationBody tr").first.locator("td").nth(3).inner_text() != "Rp 0"
     page.select_option("#inputInstallmentType", "ADDM")
+    assert "Bunga Flat 4,23%" in page.locator("#kpiRateInfo").inner_text()
+    assert "bunga mulai 3,37%" in page.locator("#metaKaryawan").inner_text()
     assert page.locator("#amortizationBody tr").first.locator("td").nth(3).inner_text() == "Rp 0"
     assert page.locator("#amortizationBody tr").nth(1).locator("td").nth(3).inner_text() != "Rp 0"
-    page.select_option("#inputRateType", "flat")
-    assert "Bunga Flat" in page.locator("#kpiRateInfo").inner_text()
-    assert page.locator("#amortizationBody tr").first.locator("td").nth(3).inner_text() == "Rp 0"
-    page.select_option("#inputInstallmentType", "ADDB")
-    assert page.locator("#amortizationBody tr").first.locator("td").nth(3).inner_text() != "Rp 0"
     page.click("#btnResetForm")
-    assert page.locator("#inputRateType").input_value() == "efektif"
     assert page.locator("#inputInstallmentType").input_value() == "ADDB"
     assert page.locator("#inputBrand").input_value() == "TOYOTA"
     assert page.locator("#inputModel").input_value() == "AVANZA"
@@ -211,11 +305,8 @@ with sync_playwright() as p:
     page.fill("#inputVehiclePrice", "200000000")
     page.click("#btnDpModeRp")
     assert page.locator("#inputDpValue").input_value() == "20.000.000"
-    page.click("#btnOpenRefModal")
-    for tab in ["tabRates", "tabFees", "tabInsBase", "tabInsPeril", "tabFidusia"]:
-        page.click(f'[data-tab="{tab}"]')
-        assert page.locator("#refModalContent table").count() > 0
-    page.click("#btnCloseRefModal")
+    assert page.locator("#btnOpenRefModal").count() == 0
+    assert page.locator("#refModalBackdrop").count() == 0
 
     # Layout PC: form di atas (3 kolom sejajar), ringkasan di bawah
     layout = page.evaluate("""() => {
@@ -263,6 +354,25 @@ with sync_playwright() as p:
         try { KKBVehicles.loadText(invalid); } catch { rejected = true; }
         if (!rejected) throw Error('Invalid CSV accepted');
       }
+      // rates: data lama tanpa kolom tipe_angsuran dianggap ADDB, flat ADDM diturunkan dari bunga efektif
+      const fins = ['New Car', 'Used Car', 'Refinancing', 'Mobil Niaga'];
+      const reg = KKBConfig.DEFAULT_SCHEMES.regular;
+      const legacyRows = fins.map(f => `flat,${f},12,2.18,1.99,3.28\\nefektif,${f},12,4.00,3.65,6.00`).join('\\n');
+      KKBRates.loadText('jenis_bunga,pembiayaan,tenor,karyawan,lnp,regular\\n' + legacyRows);
+      if (reg.interestRates['New Car'][12] !== 3.28 || reg.interestRatesAddm['New Car'][12] !== 2.77) throw Error('legacy CSV ADDM flat');
+      KKBRates.loadJson([
+        {jenis_bunga: 'flat', pembiayaan: 'New Car', tenor: 12, karyawan: 2.18, lnp: 1.99, regular: 3.28},
+        {jenis_bunga: 'efektif', pembiayaan: 'New Car', tenor: 12, karyawan: 4, lnp: 3.65, regular: 6},
+        {jenis_bunga: 'flat', tipe_angsuran: 'XYZ', pembiayaan: 'New Car', tenor: 12, regular: 9}
+      ]);
+      if (reg.interestRates['New Car'][12] !== 3.28 || reg.interestRatesAddm['New Car'][12] !== 2.77) throw Error('legacy API ADDM flat');
+      // Baris ADDM yang diisi eksplisit (boleh ditulis M) mengalahkan nilai turunan
+      const typedRows = fins.map(f => `flat,B,${f},12,2.18,1.99,3.28\\nflat,M,${f},12,1.5,1.5,1.5\\nefektif,,${f},12,4.00,3.65,6.00`).join('\\n');
+      KKBRates.loadText('jenis_bunga,tipe_angsuran,pembiayaan,tenor,karyawan,lnp,regular\\n' + typedRows);
+      if (reg.interestRates['New Car'][12] !== 3.28 || reg.interestRatesAddm['New Car'][12] !== 1.5) throw Error('explicit ADDM flat');
+      let badType = false;
+      try { KKBRates.loadText('jenis_bunga,tipe_angsuran,pembiayaan,tenor,karyawan,lnp,regular\\nflat,XYZ,New Car,12,1,1,1'); } catch { badType = true; }
+      if (!badType) throw Error('Invalid tipe_angsuran accepted');
     }''')
     page.unroute('**/vehicles.csv')
     page.route('**/vehicles.csv', lambda route: route.fulfill(status=404, body='missing'))

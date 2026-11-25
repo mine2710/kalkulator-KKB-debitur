@@ -1,0 +1,19 @@
+type,wilayah,from,to,tlo,all_risk
+Non Bus dan Non Truk,1,0,125000000,0.47,3.82
+Non Bus dan Non Truk,1,125000001,200000000,0.63,2.67
+Non Bus dan Non Truk,1,200000001,400000000,0.41,2.18
+Non Bus dan Non Truk,1,400000001,800000000,0.25,1.20
+Non Bus dan Non Truk,1,800000001,20000000000,0.20,1.05
+Non Bus dan Non Truk,2,0,125000000,0.65,3.26
+Non Bus dan Non Truk,2,125000001,200000000,0.44,2.47
+Non Bus dan Non Truk,2,200000001,400000000,0.38,2.08
+Non Bus dan Non Truk,2,400000001,800000000,0.25,1.20
+Non Bus dan Non Truk,2,800000001,20000000000,0.20,1.05
+Non Bus dan Non Truk,3,0,125000000,0.51,2.53
+Non Bus dan Non Truk,3,125000001,200000000,0.44,2.69
+Non Bus dan Non Truk,3,200000001,400000000,0.29,1.79
+Non Bus dan Non Truk,3,400000001,800000000,0.23,1.14
+Non Bus dan Non Truk,3,800000001,20000000000,0.20,1.05
+Truk dan Pick up,1,0,99999999999,0.88,2.42
+Truk dan Pick up,2,0,99999999999,1.68,2.39
+Truk dan Pick up,3,0,99999999999,0.81,2.23

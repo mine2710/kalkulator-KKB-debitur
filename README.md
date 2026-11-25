@@ -13,9 +13,9 @@ Aplikasi web interaktif untuk simulasi perhitungan **Kredit Kendaraan Bermotor (
 
 ### 2. Input Utama & Minimum DP
 1. **Skema Pembiayaan:** `Regular`, `LNP`, atau `Karyawan`.
-2. **Jenis Pembiayaan & Jenis Suku Bunga:**
+2. **Jenis Pembiayaan & Suku Bunga:**
    - Pilihan Pembiayaan: `New Car`, `Used Car` (maks. 48 bulan), `Refinancing` (maks. 48 bulan), atau `Mobil Niaga` (s.d. 60 bulan).
-   - Pilihan Jenis Suku Bunga: dropdown **`Bunga Efektif`** atau **`Bunga Flat`** (seluruh tarif default dimuat dari `rates.csv`).
+   - Suku bunga yang **ditampilkan** selalu **Bunga Flat**, sedangkan angsuran & jadwal angsuran **dihitung** dengan rumus anuitas memakai **Bunga Efektif** (seluruh tarif default dimuat dari `rates.csv`).
    - `New Car`, `Used Car`, dan `Refinancing` otomatis dipetakan ke golongan asuransi **Non Bus dan Non Truk**, sedangkan `Mobil Niaga` ke **Truk dan Pick up**.
 3. **Merk dan Tipe / Model:** dropdown tipe mengikuti merk yang dipilih.
 4. **Minimum DP:** lookup langsung dari pasangan merk + tipe/model pada katalog kendaraan.
@@ -27,8 +27,9 @@ Aplikasi web interaktif untuk simulasi perhitungan **Kredit Kendaraan Bermotor (
 
 ### 3. Rumus Perhitungan
 - **Rumus Angsuran & Skema ADDB vs ADDM:**
-  - **ADDB (Angsuran Dibayar Di Belakang):** Angsuran pertama dibayar 1 bulan pasca akad sehingga bulan ke-1 sudah memiliki **Porsi Bunga** (baik mode Bunga Efektif maupun Bunga Flat).
+  - **ADDB (Angsuran Dibayar Di Belakang):** Angsuran pertama dibayar 1 bulan pasca akad sehingga bulan ke-1 sudah memiliki **Porsi Bunga** (dihitung dari sisa pokok dengan bunga efektif).
   - **ADDM (Angsuran Dibayar Di Muka):** Angsuran pertama masuk TDP saat akad sehingga khusus bulan ke-1 **tidak dikenakan bunga** (`Porsi Bunga = Rp 0`, 100% mengurangi Pokok Hutang), dan bunga baru dihitung mulai bulan ke-2.
+  - **Bunga Flat ADDB vs ADDM:** bunga efektif sama untuk keduanya, tetapi bunga flat ADDM lebih rendah. Data suku bunga memiliki kolom `tipe_angsuran` (`ADDB` / `ADDM`); bila flat ADDM tidak diisi, nilainya dihitung dari bunga efektif dengan rumus konversi `((PMT tipe 1 × tenor) − 1) × 12 / tenor`.
 - **Rumus Biaya Kredit:** `Biaya Admin + Biaya Provisi (Rp) + Biaya Polis + Biaya Fidusia + Blokir BPKB`
 - **Rumus Biaya Provisi (Rp):** `Biaya Provisi (%) × Pokok Hutang` *(dapat diubah ke basis Harga Kendaraan melalui menu Pengaturan Rate)*
 - **Rumus Fidusia:** Otomatis mengacu pada tabel rentang Nilai Penjaminan (`s.d. 50 Jt` hingga `> 1 Miliar`).

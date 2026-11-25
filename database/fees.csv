@@ -1,0 +1,4 @@
+scheme_id,name,default_admin,default_provisi_pct,default_polis,default_blokir
+regular,BRI KKB Regular,2000000,1.00,60000,500000
+lnp,BRI KKB LNP,1250000,0.50,60000,500000
+karyawan,BRI KKB Karyawan,1000000,0.25,60000,500000

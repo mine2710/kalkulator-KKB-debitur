@@ -34,7 +34,6 @@
     provisiPct: 1.0,
     polisFee: 60000,
     blokirFee: 500000,
-    rateType: 'efektif',
     installmentType: 'ADDB',
     selectedTenor: 36,
     activeModalTab: 'tabRates',
@@ -50,6 +49,51 @@
   let lastSuiteResult = null;
 
   const $ = (id) => document.getElementById(id);
+
+  // Refinancing tidak mengenal DP: yang diisi adalah Plafon Pinjaman (nilai kendaraan - porsi yang
+  // tidak dibiayai), dan pembayaran awal hanya berisi biaya. Perhitungan internal tetap memakai dpPct/dpAmount.
+  const WORDING = {
+    standard: {
+      sectionTitle: 'Pembiayaan & Down Payment',
+      priceLabel: 'Harga Kendaraan (OTR)',
+      dpLabel: 'Down Payment (DP Murni)',
+      dpModeAria: 'Mode Input DP',
+      applyLimit: 'Pakai Min',
+      upfrontTitle: 'Total Down Payment (TDP)',
+      upfrontColumn: 'Total DP (TDP)',
+      upfrontTotalRow: 'TOTAL DOWN PAYMENT (TDP)',
+      upfrontParts: 'DP + Asuransi + Biaya Kredit',
+      detailTitle: 'Rincian TDP & Biaya Kredit',
+      detailFormula: 'TDP = DP Murni + Premi Asuransi + Biaya Kredit',
+      principalLabel: 'Pokok Hutang',
+      addmOption: 'ADDM — Angsuran ke-1 Masuk TDP',
+      addmCaption: 'Angsuran ke-1 masuk TDP saat akad (bulan ke-1 tanpa bunga).',
+      limitNotice:
+        'DP yang diisi belum memenuhi minimum kendaraan. Hasil ini hanya ilustrasi; gunakan tombol Pakai Min untuk menyesuaikan.'
+    },
+    refinancing: {
+      sectionTitle: 'Pembiayaan & Plafon Pinjaman',
+      priceLabel: 'Nilai Kendaraan (Harga Pasar)',
+      dpLabel: 'Plafon Pinjaman',
+      dpModeAria: 'Mode Input Plafon',
+      applyLimit: 'Pakai Maks',
+      upfrontTitle: 'Total Biaya Awal',
+      upfrontColumn: 'Total Biaya Awal',
+      upfrontTotalRow: 'TOTAL BIAYA AWAL',
+      upfrontParts: 'Asuransi + Biaya Kredit',
+      detailTitle: 'Rincian Biaya Awal',
+      detailFormula: 'Biaya Awal = Premi Asuransi + Biaya Kredit',
+      principalLabel: 'Plafon Pinjaman',
+      addmOption: 'ADDM — Angsuran ke-1 Dibayar di Muka',
+      addmCaption: 'Angsuran ke-1 dibayar di muka saat akad (bulan ke-1 tanpa bunga).',
+      limitNotice:
+        'Plafon yang diisi melebihi batas maksimal untuk kendaraan ini. Hasil ini hanya ilustrasi; gunakan tombol Pakai Maks untuk menyesuaikan.'
+    }
+  };
+
+  const isRefinancing = () => state.financingType === 'Refinancing';
+  const wording = () => (isRefinancing() ? WORDING.refinancing : WORDING.standard);
+  const upfrontTotal = (result) => (isRefinancing() ? result.totalUpfrontFees : result.totalDp);
 
   // ======================== FORMATTERS ========================
   function formatNumberId(num) {
@@ -85,7 +129,10 @@
   // Sidik jari default rates.csv: bila CSV berubah, kustomisasi lama di browser diabaikan.
   function defaultRatesSignature() {
     return JSON.stringify(
-      SCHEME_IDS.map((sId) => [Config.DEFAULT_SCHEMES[sId].interestRates, Config.DEFAULT_SCHEMES[sId].effectiveRates])
+      SCHEME_IDS.map((sId) => {
+        const sch = Config.DEFAULT_SCHEMES[sId];
+        return [sch.interestRates, sch.effectiveRates, sch.interestRatesAddm, sch.effectiveRatesAddm];
+      })
     );
   }
 
@@ -250,17 +297,21 @@
     });
 
     const metaIds = { regular: 'metaRegular', lnp: 'metaLnp', karyawan: 'metaKaryawan' };
-    const isFlat = state.rateType === 'flat';
+    // Yang ditampilkan ke debitur selalu bunga flat; perhitungan angsuran tetap memakai bunga efektif.
     SCHEME_IDS.forEach((sId) => {
       const sch = state.schemes[sId];
-      const rateBucket = isFlat ? sch.interestRates : sch.effectiveRates;
-      const rates = (rateBucket && rateBucket[state.financingType]) || {};
+      const rates = Calc.getRateTable(
+        sch,
+        'interestRates',
+        state.financingType,
+        state.installmentType === 'ADDM'
+      );
       const minRate = Math.min.apply(null, Object.values(rates));
       $(metaIds[sId]).textContent = `${sch.badge} • bunga mulai ${formatPct(minRate)}`;
     });
 
     const active = state.schemes[state.schemeId];
-    $('activeSchemeSubtitle').textContent = `${active.name} • ${state.financingType} • ${isFlat ? 'Bunga Flat' : 'Bunga Efektif'}`;
+    $('activeSchemeSubtitle').textContent = `${active.name} • ${state.financingType} • Bunga Flat`;
     $('tableSchemeBadge').textContent = active.name;
   }
 
@@ -273,13 +324,16 @@
     $('dpAddonLeft').hidden = isPct;
     $('dpAddonRight').hidden = !isPct;
 
+    // Refinancing menampilkan Plafon Pinjaman, yaitu kebalikan dari DP
+    const shownPct = isRefinancing() ? 100 - state.dpPct : state.dpPct;
+    const shownAmount = isRefinancing() ? state.vehiclePrice - state.dpAmount : state.dpAmount;
     if (isPct) {
       elInput.value =
-        state.dpPct % 1 === 0
-          ? String(state.dpPct)
-          : state.dpPct.toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
+        shownPct % 1 === 0
+          ? String(shownPct)
+          : shownPct.toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
     } else {
-      elInput.value = formatNumberId(state.dpAmount);
+      elInput.value = formatNumberId(shownAmount);
     }
 
     $('btnDpModePct').classList.toggle('active', isPct);
@@ -309,7 +363,7 @@
       provisiPct: state.provisiPct,
       polisFee: state.polisFee,
       blokirFee: state.blokirFee,
-      rateType: state.rateType,
+      rateType: 'efektif', // angsuran selalu dihitung dengan rumus anuitas & bunga efektif
       installmentType: state.installmentType,
       selectedTenor: state.selectedTenor,
       provisiBasis: state.provisiBasis,
@@ -322,31 +376,56 @@
     const active = suite.activeResult;
     const minDp = suite.minDpInfo;
 
-    // Info DP
-    $('dpConvertedCaption').innerHTML =
-      `DP Murni <strong>${formatRupiah(active.dpAmount)}</strong> (${formatPct(active.dpPct, 1)}) • Pokok Hutang <strong>${formatRupiah(active.principalLoan)}</strong>`;
+    // Istilah mengikuti jenis pembiayaan (Refinancing: Plafon Pinjaman & Biaya Awal, tanpa DP)
+    const refi = isRefinancing();
+    const words = wording();
+    const withFirstInstallment = active.installmentType === 'ADDM' ? ' + Angsuran Ke-1' : '';
+    $('sectionFinancingTitle').textContent = words.sectionTitle;
+    $('labelVehiclePrice').textContent = words.priceLabel;
+    $('labelDpValue').textContent = words.dpLabel;
+    $('dpModeGroup').setAttribute('aria-label', words.dpModeAria);
+    $('btnApplyMinDp').textContent = words.applyLimit;
+    $('kpiUpfrontLabel').textContent = words.upfrontTitle;
+    $('kpiPrincipalLabel').textContent = words.principalLabel;
+    $('detailTitleText').textContent = words.detailTitle;
+    $('detailFormulaText').textContent = words.detailFormula + withFirstInstallment;
+    $('inputInstallmentType').querySelector('option[value="ADDM"]').textContent = words.addmOption;
+
+    // Info DP / Plafon
+    const maxPlafonPct = 100 - minDp.minDpPct;
+    const maxPlafonAmount = active.vehiclePrice - minDp.minDpAmount;
+    $('dpConvertedCaption').innerHTML = refi
+      ? `Plafon Pinjaman <strong>${formatRupiah(active.principalLoan)}</strong> (${formatPct(100 - active.dpPct, 1)} dari nilai kendaraan)`
+      : `DP Murni <strong>${formatRupiah(active.dpAmount)}</strong> (${formatPct(active.dpPct, 1)}) • Pokok Hutang <strong>${formatRupiah(active.principalLoan)}</strong>`;
 
     const isBelowMin = Math.round(active.dpAmount) < Math.round(minDp.minDpAmount);
     $('simulationNotice').hidden = !isBelowMin;
-    $('simulationNotice').textContent = 'DP yang diisi belum memenuhi minimum kendaraan. Hasil ini hanya ilustrasi; gunakan tombol Pakai Min untuk menyesuaikan.';
+    $('simulationNotice').textContent = words.limitNotice;
     $('inputDpValue').setAttribute('aria-invalid', String(isBelowMin));
     $('dpMinBox').classList.toggle('warning', isBelowMin);
-    $('dpMinText').innerHTML = isBelowMin
-      ? `<strong>⚠ Di bawah minimal ${formatPct(minDp.minDpPct, 1)}</strong> (${formatRupiah(minDp.minDpAmount)})`
-      : `<strong>✓ Minimal DP ${formatPct(minDp.minDpPct, 1)}</strong> (${formatRupiah(minDp.minDpAmount)})`;
-    $('dpFactorsList').textContent = minDp.factors.map((f) => `${f.label} ${f.value}`).join(' • ');
+    if (refi) {
+      $('dpMinText').innerHTML = isBelowMin
+        ? `<strong>⚠ Di atas maksimal plafon ${formatPct(maxPlafonPct, 1)}</strong> (${formatRupiah(maxPlafonAmount)})`
+        : `<strong>✓ Maksimal plafon ${formatPct(maxPlafonPct, 1)}</strong> (${formatRupiah(maxPlafonAmount)})`;
+      $('dpFactorsList').textContent = `${minDp.vehicle.brand} ${minDp.vehicle.model} maks. ${formatPct(maxPlafonPct, 0)}`;
+    } else {
+      $('dpMinText').innerHTML = isBelowMin
+        ? `<strong>⚠ Di bawah minimal ${formatPct(minDp.minDpPct, 1)}</strong> (${formatRupiah(minDp.minDpAmount)})`
+        : `<strong>✓ Minimal DP ${formatPct(minDp.minDpPct, 1)}</strong> (${formatRupiah(minDp.minDpAmount)})`;
+      $('dpFactorsList').textContent = minDp.factors.map((f) => `${f.label} ${f.value}`).join(' • ');
+    }
     $('btnApplyMinDp').hidden = !isBelowMin && Math.abs(active.dpPct - minDp.minDpPct) < 0.01;
 
     // Info Biaya Provisi & Fidusia
     $('provisiRpCaption').textContent =
-      `Provisi = ${formatRupiah(active.creditFees.provisiAmount)} (${formatPct(state.provisiPct)} × ${state.provisiBasis === 'price' ? 'Harga Kendaraan' : 'Pokok Hutang'})`;
+      `Provisi = ${formatRupiah(active.creditFees.provisiAmount)} (${formatPct(state.provisiPct)} × ${state.provisiBasis === 'price' ? (refi ? 'Nilai Kendaraan' : 'Harga Kendaraan') : words.principalLabel})`;
     $('fidusiaBracketInfo').textContent = active.creditFees.fidusiaBracket;
     $('fidusiaFeeDisplay').textContent = formatRupiah(active.creditFees.fidusiaFee);
     const instCap = $('installmentTypeCaption');
     if (instCap) {
       instCap.textContent =
         active.installmentType === 'ADDM'
-          ? 'Angsuran ke-1 masuk TDP saat akad (bulan ke-1 tanpa bunga).'
+          ? words.addmCaption
           : 'Angsuran ke-1 dibayar 1 bulan pasca akad (sudah termasuk bunga).';
     }
 
@@ -354,14 +433,9 @@
     $('kpiTenorLabel').textContent = `Angsuran / Bulan • Tenor ${active.tenorMonths} Bln`;
     $('kpiMonthlyInstallment').textContent = formatRupiah(active.monthlyInstallment);
     $('kpiRateInfo').textContent =
-      active.rateType === 'flat'
-        ? `Bunga Flat ${formatPct(active.flatRatePa)} p.a. • Skema ${active.installmentType}`
-        : `Bunga Efektif ${formatPct(active.effectiveRatePa)} p.a. • Skema ${active.installmentType}`;
-    $('kpiTotalDp').textContent = formatRupiah(active.totalDp);
-    $('kpiTdpSub').textContent =
-      active.installmentType === 'ADDM'
-        ? 'DP + Asuransi + Biaya Kredit + Angsuran Ke-1'
-        : 'DP Murni + Premi Asuransi + Biaya Kredit';
+      `Bunga Flat ${formatPct(active.flatRatePa)} p.a. • Skema ${active.installmentType}`;
+    $('kpiTotalDp').textContent = formatRupiah(upfrontTotal(active));
+    $('kpiTdpSub').textContent = words.upfrontParts + withFirstInstallment;
     $('kpiPrincipalLoan').textContent = formatRupiah(active.principalLoan);
     $('kpiTotalInterestSub').textContent = `Total bunga kredit ${formatRupiah(active.totalInterest)}`;
 
@@ -378,22 +452,20 @@
     const amortRows = Calc.generateAmortizationSchedule(active);
     renderAmortizationTable(amortRows, active);
 
-    if ($('refModalBackdrop').classList.contains('open')) {
+    if ($('refModalBackdrop') && $('refModalBackdrop').classList.contains('open')) {
       renderModalTabContent();
     }
   }
 
   function renderTenorTable(tenorResults, selectedTenor) {
     const tbody = $('tenorSummaryBody');
-    const isFlat = state.rateType === 'flat';
-    const rateHeader = isFlat ? 'Suku Bunga Flat' : 'Suku Bunga Efektif';
-    const thRate = $('thTenorRate');
-    if (thRate) thRate.textContent = rateHeader;
+    const rateHeader = 'Suku Bunga Flat';
+    const upfrontHeader = wording().upfrontColumn;
+    $('thTenorUpfront').textContent = upfrontHeader;
 
     tbody.innerHTML = tenorResults
       .map((row) => {
         const isSel = row.tenorMonths === selectedTenor;
-        const shownRate = row.rateType === 'flat' ? row.flatRatePa : row.effectiveRatePa;
         const cls = ['clickable', isSel ? 'selected' : '', !row.isAvailable ? 'unavailable' : '']
           .filter(Boolean)
           .join(' ');
@@ -405,9 +477,9 @@
               ${isSel ? '<span class="tag tag-orange">Dipilih</span>' : ''}
               ${!row.isAvailable ? '<span class="tag tag-gray">Tidak tersedia</span>' : ''}
             </td>
-            <td class="num strong text-blue" data-label="${rateHeader}">${formatPct(shownRate)}</td>
+            <td class="num strong text-blue" data-label="${rateHeader}">${formatPct(row.flatRatePa)}</td>
             <td class="num strong text-blue" data-label="Angsuran / Bulan">${formatRupiah(row.monthlyInstallment)}</td>
-            <td class="num strong text-dark" data-label="Total DP (TDP)">${formatRupiah(row.totalDp)}</td>
+            <td class="num strong text-dark" data-label="${upfrontHeader}">${formatRupiah(upfrontTotal(row))}</td>
           </tr>
         `;
       })
@@ -434,21 +506,27 @@
     const ins = active.insurance;
     const covLabel = ins.coverage.label.split(' (')[0];
     const isCollapsed = state.isCreditFeesCollapsed;
-
-    const rowsHtml = `
+    const words = wording();
+    // Refinancing tidak memiliki baris DP, sehingga penomoran dimulai dari premi asuransi
+    let rowNo = 0;
+    const dpRowHtml = isRefinancing()
+      ? ''
+      : `
       <tr>
-        <td class="strong">1. Down Payment (DP Murni)</td>
+        <td class="strong">${++rowNo}. Down Payment (DP Murni)</td>
         <td class="num strong">${formatRupiah(active.dpAmount)}</td>
         <td class="muted col-ket">${formatPct(active.dpPct, 2)} × ${formatRupiah(active.vehiclePrice)}</td>
-      </tr>
+      </tr>`;
+
+    const rowsHtml = `${dpRowHtml}
       <tr>
-        <td class="strong">2. Total Premi Asuransi</td>
+        <td class="strong">${++rowNo}. Total Premi Asuransi</td>
         <td class="num strong">${formatRupiah(ins.totalPremium)}</td>
         <td class="muted col-ket">${covLabel} (${active.tenorYears} Tahun • ${state.vehicleType})</td>
       </tr>
       <tr class="subtotal-row" id="btnToggleCreditFees" style="cursor:pointer;" title="Klik untuk menampilkan atau menyembunyikan rincian biaya kredit">
         <td class="strong" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <span>3. Total Biaya Kredit</span>
+          <span>${++rowNo}. Total Biaya Kredit</span>
           <span class="tag tag-gray" style="font-size:0.68rem; font-weight:600; cursor:pointer;">${isCollapsed ? '▶ Buka Rincian' : '▼ Sembunyikan'}</span>
         </td>
         <td class="num strong">${formatRupiah(fees.totalCreditFees)}</td>
@@ -483,7 +561,7 @@
         active.firstInstallmentInTdp > 0
           ? `
         <tr>
-          <td class="strong">4. Angsuran Ke-1 (ADDM)</td>
+          <td class="strong">${++rowNo}. Angsuran Ke-1 (ADDM)</td>
           <td class="num strong">${formatRupiah(active.firstInstallmentInTdp)}</td>
           <td class="muted col-ket">Dibayar di muka saat akad</td>
         </tr>`
@@ -494,13 +572,9 @@
     $('tdpTableBody').innerHTML = rowsHtml;
     $('tdpTableFoot').innerHTML = `
       <tr>
-        <td>TOTAL DOWN PAYMENT (TDP)</td>
-        <td class="num strong text-dark">${formatRupiah(active.totalDp)}</td>
-        <td class="muted col-ket">${
-          active.installmentType === 'ADDM'
-            ? 'DP + Asuransi + Biaya Kredit + Angsuran Ke-1'
-            : 'DP + Asuransi + Biaya Kredit'
-        }</td>
+        <td>${words.upfrontTotalRow}</td>
+        <td class="num strong text-dark">${formatRupiah(upfrontTotal(active))}</td>
+        <td class="muted col-ket">${words.upfrontParts}${active.installmentType === 'ADDM' ? ' + Angsuran Ke-1' : ''}</td>
       </tr>
     `;
 
@@ -517,10 +591,13 @@
     $('yearlyInsuranceBody').innerHTML = insurance.yearlyBreakdown
       .map((yr) => {
         const isAR = yr.coverageType === 'All Risk';
-        const rateDetail =
+        let rateDetail =
           yr.perilRatePct > 0
             ? `${formatPct(yr.combinedRatePct, 3)} <span class="muted">(${formatPct(yr.baseRatePct)} + ${formatPct(yr.perilRatePct, 3)})</span>`
             : formatPct(yr.baseRatePct);
+        if (yr.perilFixedAmount > 0) {
+          rateDetail += ` <span class="muted">+ ${formatRupiah(yr.perilFixedAmount)}</span>`;
+        }
         return `
           <tr>
             <td><strong>Tahun ${yr.year}</strong> <span class="muted">(Bln ${yr.monthRange})</span></td>
@@ -544,16 +621,11 @@
   }
 
   function renderAmortizationTable(rows, active) {
-    const isFlat = active.rateType === 'flat';
     const isADDM = active.installmentType === 'ADDM';
-    const rateLabel = isFlat
-      ? `Bunga Flat ${formatPct(active.flatRatePa)} p.a.`
-      : `Bunga Efektif ${formatPct(active.effectiveRatePa)} p.a.`;
+    const rateLabel = `Bunga Flat ${formatPct(active.flatRatePa)} p.a.`;
     const ruleLabel = isADDM
       ? 'ADDM: Bulan ke-1 tanpa bunga (100% Porsi Pokok), bunga dihitung mulai bulan ke-2'
-      : isFlat
-        ? 'ADDB: Porsi pokok & bunga dihitung tetap sejak bulan ke-1'
-        : 'ADDB: Bunga dihitung sejak bulan ke-1 dari sisa pokok pinjaman';
+      : 'ADDB: Bunga dihitung sejak bulan ke-1 dari sisa pokok pinjaman';
     $('amortSubtitleInfo').textContent = `${rateLabel} • ${ruleLabel}`;
 
     let tPrin = 0;
@@ -620,6 +692,7 @@
 
   function renderModalTabContent() {
     const box = $('refModalContent');
+    if (!box) return;
     const tab = state.activeModalTab;
     const schemeHeaders = SCHEME_IDS.map(
       (sId) =>
@@ -894,8 +967,7 @@
         (p) => `
         <tr>
           <td><strong>${p.label}</strong></td>
-          ${['1', '2', '3'].map((w) => `<td class="num">${formatPct(p.rates['All Risk'][w], 3)}</td>`).join('')}
-          ${['1', '2', '3'].map((w) => `<td class="num">${formatPct(p.rates['TLO'][w], 3)}</td>`).join('')}
+          ${['All Risk', 'TLO'].map((cov) => ['1', '2', '3'].map((w) => `<td class="num">${p.fixed ? formatRupiah(p.rates[cov][w]) : formatPct(p.rates[cov][w], 3)}</td>`).join('')).join('')}
         </tr>`
       ).join('');
 
@@ -917,7 +989,7 @@
           <div class="modal-section-head">
             <div>
               <h4>Tabel Syarat Klaim / Perluasan Jaminan Asuransi</h4>
-              <p>Rate tambahan per tahun berdasarkan Wilayah (1 / 2 / 3) dan jenis Coverage (All Risk / TLO)</p>
+              <p>Rate tambahan per tahun berdasarkan Wilayah (1 / 2 / 3) dan jenis Coverage (All Risk / TLO); TJH berupa nominal tetap per tahun</p>
             </div>
           </div>
           <div class="bordered">
@@ -1023,12 +1095,14 @@
   }
 
   function openModal() {
+    if (!$('refModalBackdrop')) return;
     renderModalTabContent();
     $('refModalBackdrop').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
 
   function closeModal() {
+    if (!$('refModalBackdrop')) return;
     $('refModalBackdrop').classList.remove('open');
     document.body.style.overflow = '';
   }
@@ -1065,6 +1139,7 @@
           : 500000;
       $('inputBlokirFee').value = formatNumberId(state.blokirFee);
       ensureTenorAllowed();
+      syncDpInputField(); // isi kolom berganti antara DP dan Plafon Pinjaman
       updateSchemeUi();
       recalculateAndRender();
     });
@@ -1112,13 +1187,17 @@
 
     const elDp = $('inputDpValue');
     elDp.addEventListener('input', () => {
+      // Refinancing: angka yang diketik adalah Plafon Pinjaman, DP internal = sisanya
+      const refi = isRefinancing();
       if (state.dpMode === 'pct') {
-        state.dpPct = Math.min(95, Math.max(0, parseDecimalId(elDp.value)));
+        const typed = parseDecimalId(elDp.value);
+        state.dpPct = refi ? Math.min(100, Math.max(0, 100 - typed)) : Math.min(95, Math.max(0, typed));
         state.dpAmount = Math.round((state.vehiclePrice * state.dpPct) / 100);
       } else {
-        state.dpAmount = Math.min(state.vehiclePrice, parseDigits(elDp.value));
+        const typed = Math.min(state.vehiclePrice, parseDigits(elDp.value));
+        state.dpAmount = refi ? state.vehiclePrice - typed : typed;
         state.dpPct = state.vehiclePrice > 0 ? (state.dpAmount / state.vehiclePrice) * 100 : 0;
-        elDp.value = state.dpAmount > 0 ? formatNumberId(state.dpAmount) : '';
+        elDp.value = typed > 0 ? formatNumberId(typed) : '';
       }
       recalculateAndRender();
     });
@@ -1161,14 +1240,9 @@
       recalculateAndRender();
     });
 
-    $('inputRateType').addEventListener('change', (e) => {
-      state.rateType = e.target.value;
-      updateSchemeUi();
-      recalculateAndRender();
-    });
-
     $('inputInstallmentType').addEventListener('change', (e) => {
       state.installmentType = e.target.value;
+      updateSchemeUi();
       recalculateAndRender();
     });
 
@@ -1195,13 +1269,11 @@
         dpMode: 'pct',
         coverageValue: 'Kombinasi#1',
         selectedPerils: ['banjir'],
-        rateType: 'efektif',
         installmentType: 'ADDB',
         selectedTenor: 36
       });
       $('inputWilayah').value = state.wilayah;
       $('inputFinancingType').value = state.financingType;
-      $('inputRateType').value = state.rateType;
       populateStaticDropdowns();
       applyMinimumDp();
       $('inputVehiclePrice').value = formatNumberId(state.vehiclePrice);
@@ -1211,15 +1283,17 @@
       applySchemeDefaults('regular');
     });
 
-    // Modal
-    $('btnOpenRefModal').addEventListener('click', openModal);
-    $('btnCloseRefModal').addEventListener('click', closeModal);
-    $('refModalBackdrop').addEventListener('click', (e) => {
-      if (e.target === $('refModalBackdrop')) closeModal();
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && $('refModalBackdrop').classList.contains('open')) closeModal();
-    });
+    // Modal (jika ada tombol & modal di halaman)
+    if ($('btnOpenRefModal')) $('btnOpenRefModal').addEventListener('click', openModal);
+    if ($('btnCloseRefModal')) $('btnCloseRefModal').addEventListener('click', closeModal);
+    if ($('refModalBackdrop')) {
+      $('refModalBackdrop').addEventListener('click', (e) => {
+        if (e.target === $('refModalBackdrop')) closeModal();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && $('refModalBackdrop').classList.contains('open')) closeModal();
+      });
+    }
 
     document.querySelectorAll('.modal-tab').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -1238,15 +1312,58 @@
     controls.forEach((control) => { control.disabled = true; });
     const status = $('simulationNotice');
     status.hidden = false;
-    status.textContent = 'Memuat data kendaraan & suku bunga (vehicles.csv, rates.csv)...';
+    status.textContent = 'Memuat database dari Google Spreadsheet...';
     try {
-      await Promise.all([global.KKBVehicles.load(), global.KKBRates.load()]);
+      let loadedFromApi = false;
+      const urlParams = new URLSearchParams(window.location.search);
+      const forceCsv = urlParams.get('source') === 'csv';
+
+      const endpoint = Config.getApiEndpoint ? Config.getApiEndpoint() : Config.API_ENDPOINT;
+      const token = Config.getApiToken ? Config.getApiToken() : '';
+
+      if (endpoint && !forceCsv) {
+        try {
+          // Mengirim request via HTTP POST dengan Token di dalam amplop (Body/Payload)
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8'
+            },
+            body: JSON.stringify({ token: token })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'error' || data.error) {
+              console.warn('Otorisasi POST API ditolak oleh Google Apps Script:', data.message);
+            } else if (data && data.vehicles && data.vehicles.length && data.rates && data.rates.length) {
+              global.KKBConfig.updateFromApi(data);
+              global.KKBVehicles.loadJson(data.vehicles);
+              global.KKBRates.loadJson(data.rates);
+              loadedFromApi = true;
+              console.log(
+                `Database berhasil dimuat via POST dari Google Spreadsheet (${data.vehicles.length} mobil, ${data.rates.length} baris suku bunga).`
+              );
+            }
+          }
+        } catch (apiErr) {
+          console.warn('Gagal memuat via POST dari Google Spreadsheet, beralih ke cadangan lokal:', apiErr);
+        }
+      }
+
+      if (!loadedFromApi) {
+        status.textContent = 'Memuat data cadangan lokal (vehicles.csv, rates.csv)...';
+        await Promise.all([global.KKBVehicles.load(), global.KKBRates.load()]);
+      }
+
       state.schemes = cloneDeep(Config.DEFAULT_SCHEMES);
       loadSavedSettings();
       populateStaticDropdowns();
       renderPerilCheckboxes();
       bindEvents();
       applySchemeDefaults(state.schemeId);
+      status.hidden = true;
+      status.textContent = '';
       controls.forEach((control) => { control.disabled = false; });
     } catch (error) {
       status.hidden = false;

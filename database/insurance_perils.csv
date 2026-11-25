@@ -1,0 +1,11 @@
+id,label,coverage,wilayah_1,wilayah_2,wilayah_3
+tjh,TJH Pihak Ke-3 10JT,All Risk,100000,100000,100000
+tjh,TJH Pihak Ke-3 10JT,TLO,100000,100000,100000
+banjir,Banjir Angin Topan & Badai,All Risk,0.075,0.100,0.075
+banjir,Banjir Angin Topan & Badai,TLO,0.050,0.075,0.050
+gempa,Gempa Bumi & Tsunami,All Risk,0.120,0.100,0.075
+gempa,Gempa Bumi & Tsunami,TLO,0.085,0.075,0.050
+srcc,Huru-Hara & Kerusuhan (SRCC),All Risk,0.050,0.050,0.050
+srcc,Huru-Hara & Kerusuhan (SRCC),TLO,0.035,0.035,0.035
+terorisme,Terorisme & Sabotase,All Risk,0.050,0.050,0.050
+terorisme,Terorisme & Sabotase,TLO,0.035,0.035,0.035
